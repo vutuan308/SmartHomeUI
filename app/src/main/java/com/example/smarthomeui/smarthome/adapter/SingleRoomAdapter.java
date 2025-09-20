@@ -1,68 +1,52 @@
 package com.example.smarthomeui.smarthome.adapter;
 
-
-import android.content.Context;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.view.*;
+import android.widget.ImageView;
 import android.widget.TextView;
-
-import androidx.cardview.widget.CardView;
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
-import com.example.smarthomeui.smarthome.model.Room;
+import com.example.smarthomeui.smarthome.model.Device;
+import com.google.android.material.materialswitch.MaterialSwitch;
 
 import java.util.List;
 
-/**
- * Smart Home
- * https://github.com/quintuslabs/SmartHome
- * Created on 27-OCT-2019.
- * Created by : Santosh Kumar Dash:- http://santoshdash.epizy.com
- */
+public class SingleRoomAdapter extends RecyclerView.Adapter<SingleRoomAdapter.VH> {
+    private final List<Device> data;
 
-public class SingleRoomAdapter extends RecyclerView.Adapter<SingleRoomAdapter.MyViewHolder> {
+    public SingleRoomAdapter(List<Device> data) { this.data = data; }
 
-    Context context;
-    private List<Room> roomList;
-
-    public SingleRoomAdapter(List<Room> roomList, Context context) {
-        this.roomList = roomList;
-        this.context = context;
+    @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int v) {
+        View view = LayoutInflater.from(p.getContext()).inflate(R.layout.single_room_row, p, false);
+        return new VH(view);
     }
 
-    @Override
-    public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View itemView = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.single_room_row, parent, false);
+    @Override public void onBindViewHolder(@NonNull VH h, int pos) {
+        Device d = data.get(pos);
+        h.name.setText(d.getName());
+        h.type.setText(d.getType());
+        h.toggle.setChecked(d.isOn());
 
-        return new MyViewHolder(itemView);
+        int icon = R.drawable.ic_device_other;
+        if ("Light".equalsIgnoreCase(d.getType())) icon = R.drawable.ic_device_light;
+        else if ("Fan".equalsIgnoreCase(d.getType())) icon = R.drawable.ic_device_fan;
+        else if ("AC".equalsIgnoreCase(d.getType())) icon = R.drawable.ic_device_ac;
+        h.icon.setImageResource(icon);
+
+        h.toggle.setOnCheckedChangeListener((b, checked) -> d.setOn(checked));
     }
 
-    @Override
-    public void onBindViewHolder(MyViewHolder holder, int position) {
-        Room room = roomList.get(position);
+    @Override public int getItemCount() { return data.size(); }
 
-        holder.title.setText(room.getName());
-
-
-    }
-
-    @Override
-    public int getItemCount() {
-        return roomList.size();
-    }
-
-    public class MyViewHolder extends RecyclerView.ViewHolder {
-        public TextView title;
-        public CardView cardView;
-
-        public MyViewHolder(View view) {
-            super(view);
-            title = view.findViewById(R.id.title);
-            cardView = view.findViewById(R.id.card_view);
-
+    static class VH extends RecyclerView.ViewHolder {
+        ImageView icon; TextView name; TextView type; MaterialSwitch toggle;
+        VH(@NonNull View itemView) {
+            super(itemView);
+            icon = itemView.findViewById(R.id.ivDeviceIcon);
+            name = itemView.findViewById(R.id.tvDeviceName);
+            type = itemView.findViewById(R.id.tvDeviceType);
+            toggle = itemView.findViewById(R.id.swDeviceOnOff);
         }
     }
 }

@@ -10,18 +10,18 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
-import com.example.smarthomeui.smarthome.model.Room;
+import com.example.smarthomeui.smarthome.model.House;
 
 import java.util.List;
 
-public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
+public class HouseAdapter extends RecyclerView.Adapter<HouseAdapter.VH> {
 
-    public interface OnRoomClick { void onClick(Room r); }
+    public interface OnHouseClick { void onClick(House h); }
 
-    private final List<Room> data;
-    private final OnRoomClick listener;
+    private final List<House> data;
+    private final OnHouseClick listener;
 
-    public RoomAdapter(List<Room> data, OnRoomClick l) {
+    public HouseAdapter(List<House> data, OnHouseClick l) {
         this.data = data;
         this.listener = l;
     }
@@ -29,19 +29,19 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
     @NonNull @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.home_row, parent, false); // dùng chung item
+                .inflate(R.layout.home_row, parent, false);
         return new VH(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
-        Room r = data.get(position);
-        h.ivIcon.setImageResource(r.getIconRes() != 0 ? r.getIconRes() : R.drawable.ic_room_bed);
-        h.tvName.setText(r.getName());
-        h.tvCount.setText(r.getDeviceCount() + " thiết bị");
+        House x = data.get(position);
+        h.ivIcon.setImageResource(x.getIconRes() != 0 ? x.getIconRes() : R.drawable.ic_house);
+        h.tvName.setText(x.getName());
+        h.tvCount.setText(x.getRoomCount() + " phòng");
 
         h.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onClick(r);
+            if (listener != null) listener.onClick(x);
         });
     }
 

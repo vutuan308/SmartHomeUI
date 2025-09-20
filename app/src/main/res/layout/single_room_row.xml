@@ -1,71 +1,51 @@
-<?xml version="1.0" encoding="utf-8"?><!--Smart Home
-   https://github.com/quintuslabs/SmartHome
-   Created on 27-OCT-2019.
-   Created by : Santosh Kumar Dash:- http://santoshdash.epizy.com-->
+<?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/card_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="10dp"
-    app:cardElevation="6dp"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="16dp"
     app:cardUseCompatPadding="true">
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp">
+
+        <ImageView
+            android:id="@+id/ivDeviceIcon"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_device_other" />
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="10dp"
-            android:weightSum="10">
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvDeviceName"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="2"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:text="Thiết bị"
+                android:textStyle="bold"
+                android:textSize="16sp" />
 
-                <ImageView
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:background="@drawable/ic_double_bed" />
-
-                <TextView
-                    android:id="@+id/title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="10dp"
-                    android:text="Bed Room"
-                    android:textColor="@color/textColor"
-                    android:textSize="20dp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvDeviceType"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="8"
-                android:gravity="center">
-
-                <com.example.smarthomeui.smarthome.utils.SwitchButton
-                    android:layout_width="65dp"
-                    android:layout_height="30dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_marginTop="5dp"
-                    app:sb_background="@color/colorPrimaryLight"
-                    app:sb_button_color="@color/colorPrimaryDark"
-                    app:sb_checked_color="#6C6A74"
-                    app:sb_checkline_color="#a5dc88"
-                    app:sb_shadow_color="#A36F95"
-                    app:sb_uncheckcircle_color="#3F51B5" />
-            </LinearLayout>
+                android:text="Light"
+                android:textSize="12sp" />
         </LinearLayout>
 
-    </RelativeLayout>
-
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/swDeviceOnOff"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
 </androidx.cardview.widget.CardView>

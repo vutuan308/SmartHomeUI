@@ -1,34 +1,24 @@
 package com.example.smarthomeui.smarthome.model;
 
-/**
- * Smart Home
- * https://github.com/quintuslabs/SmartHome
- * Created on 27-OCT-2019.
- * Created by : Santosh Kumar Dash:- http://santoshdash.epizy.com
- */
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
-public class Room {
-    String id;
-    String name;
+public class Room implements Serializable {
+    private String id;
+    private String name;
+    private int iconRes;
+    private final List<Device> devices = new ArrayList<>();
 
-    public Room(String id, String name) {
+    public Room(String id, String name, int iconRes) {
         this.id = id;
         this.name = name;
+        this.iconRes = iconRes;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
+    public String getId() { return id; }
+    public String getName() { return name; }
+    public int getIconRes() { return iconRes; }
+    public List<Device> getDevices() { return devices; }
+    public int getDeviceCount() { return devices.size(); }
 }

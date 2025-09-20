@@ -1,10 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?><!--Smart Home
-   https://github.com/quintuslabs/SmartHome
-   Created on 27-OCT-2019.
-   Created by : Santosh Kumar Dash:- http://santoshdash.epizy.com-->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home/Room card item: dùng chung cho HouseAdapter (hiển thị "x phòng")
+     và RoomAdapter (hiển thị "x thiết bị") -->
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/card_view"
     android:layout_width="match_parent"
     android:layout_height="200dp"
@@ -16,12 +14,14 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <!-- Dải nền phía dưới -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="70dp"
             android:layout_alignParentBottom="true"
             android:background="@drawable/bg_5" />
 
+        <!-- Nội dung chính: icon + tiêu đề phòng/nhà -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -29,51 +29,51 @@
             android:padding="10dp">
 
             <ImageView
-                android:id="@+id/image_view"
+                android:id="@+id/ivRoomIcon"
                 android:layout_width="70dp"
                 android:layout_height="70dp"
                 android:layout_gravity="center"
-                android:background="@drawable/ic_double_bed" />
+                android:src="@drawable/ic_double_bed"
+                android:contentDescription="@string/app_name" />
 
             <TextView
-                android:id="@+id/title"
+                android:id="@+id/tvRoomName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="Bed Room"
+                android:text="Tên"
                 android:textColor="@color/textColor"
-                android:textSize="20dp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
         </LinearLayout>
 
+        <!-- Thanh thông tin + công tắc -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
             android:layout_margin="10dp">
 
+            <!-- Đếm số phòng/thiết bị (adapter sẽ set text) -->
             <TextView
+                android:id="@+id/tvDeviceCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="5 Devices"
+                android:text="0 thiết bị"
                 android:textColor="@color/colorPrimaryDark"
-                android:textSize="14dp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <com.example.smarthomeui.smarthome.utils.SwitchButton
+            <!-- Dùng MaterialSwitch thay SwitchButton custom -->
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/swMaster"
                 android:layout_width="65dp"
                 android:layout_height="30dp"
                 android:layout_alignParentEnd="true"
                 android:layout_marginTop="5dp"
-                app:sb_background="@color/colorPrimaryLight"
-                app:sb_button_color="@color/colorPrimaryDark"
-                app:sb_checked_color="#673AB7"
-                app:sb_checkline_color="#a5dc88"
-                app:sb_shadow_color="#A36F95"
-                app:sb_uncheckcircle_color="#3F51B5"
-                tools:ignore="MissingClass" />
+                android:checked="false" />
         </RelativeLayout>
     </RelativeLayout>
 

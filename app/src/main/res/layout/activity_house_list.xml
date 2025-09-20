@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/background"
-    tools:context=".smarthome.ui.activity.MainActivity">
+    tools:context=".smarthome.ui.activity.HouseListActivity">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -38,7 +38,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Hi, Gopal"
+                        android:text="Hi, Việt"
                         android:textColor="@color/white"
                         android:textSize="16dp"
                         android:textStyle="bold" />
@@ -46,7 +46,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Welcome to your home"
+                        android:text="Chọn ngôi nhà của bạn"
                         android:textColor="@color/white_70"
                         android:textSize="12dp"
                         android:textStyle="bold" />
@@ -58,9 +58,7 @@
                         android:clipToPadding="false"
                         android:nestedScrollingEnabled="false"
                         android:paddingBottom="120dp" />
-
                 </LinearLayout>
-
             </RelativeLayout>
         </ScrollView>
 
@@ -73,114 +71,60 @@
             android:weightSum="5">
 
             <LinearLayout
-                android:id="@+id/home_ll"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center">
-
-                <RelativeLayout
-                    android:id="@+id/home_rl"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp">
-
-                    <ImageView
-                        android:id="@+id/ivHome"
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_centerInParent="true"
-                        android:background="@drawable/home"
-                        android:contentDescription="@string/app_name" />
-                </RelativeLayout>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/room_ll"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center">
-
-                <RelativeLayout
-                    android:id="@+id/room_rl"
-                    android:layout_width="46dp"
-                    android:layout_height="50dp">
-
-                    <ImageView
-                        android:id="@+id/ivRooms"
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_centerInParent="true"
-                        android:background="@drawable/room"
-                        android:contentDescription="@string/app_name" />
-                </RelativeLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/plus_ll"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center">
-
-                <!-- THÊM ID CHO NÚT “+” -->
                 <ImageView
-                    android:id="@+id/ivPlus"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/home" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center">
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/time" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center">
+                <ImageView
+                    android:id="@+id/ivPlusHouse"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
-                    android:src="@drawable/ic_plus"
-                    android:tint="@android:color/white"
-                    android:contentDescription="@string/app_name"
-                    android:clickable="true"
-                    android:focusable="true"
-                    tools:ignore="UseAppTint" />
+                    android:background="@drawable/ic_plus" />
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/device_ll"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center">
-
-                <RelativeLayout
-                    android:id="@+id/device_rl"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp">
-
-                    <ImageView
-                        android:id="@+id/ivDevices"
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_centerInParent="true"
-                        android:background="@drawable/device"
-                        android:contentDescription="@string/app_name" />
-                </RelativeLayout>
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/graph" />
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/setting_ll"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center">
-
-                <RelativeLayout
-                    android:id="@+id/setting_rl"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp">
-
-                    <ImageView
-                        android:id="@+id/ivSetting"
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_centerInParent="true"
-                        android:background="@drawable/settings"
-                        android:contentDescription="@string/app_name" />
-                </RelativeLayout>
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/settings" />
             </LinearLayout>
-
         </LinearLayout>
     </RelativeLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

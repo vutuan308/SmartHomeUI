@@ -1,94 +1,109 @@
 package com.example.smarthomeui.smarthome.ui.activity;
 
-import android.app.Activity;
-import android.content.Intent;
-import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.Spinner;
+import android.widget.TextView;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.adapter.SingleRoomAdapter;
+import com.example.smarthomeui.smarthome.data.SmartRepository;
+import com.example.smarthomeui.smarthome.model.Device;
 import com.example.smarthomeui.smarthome.model.Room;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
-/**
- * Smart Home
- * https://github.com/quintuslabs/SmartHome
- * Created on 27-OCT-2019.
- * Created by : Santosh Kumar Dash:- http://santoshdash.epizy.com
- */
 public class RoomDetailsActivity extends AppCompatActivity {
-    private List<Room> roomList = new ArrayList<>();
-    private RecyclerView recyclerView;
-    private SingleRoomAdapter mAdapter;
 
-    public static void setWindowFlag(Activity activity, final int bits, boolean on) {
+    private String houseId;
+    private String roomId;
+    private Room room;
 
-        Window win = activity.getWindow();
-        WindowManager.LayoutParams winParams = win.getAttributes();
-        if (on) {
-            winParams.flags |= bits;
-        } else {
-            winParams.flags &= ~bits;
-        }
-        win.setAttributes(winParams);
-    }
+    private RecyclerView rv;
+    private SingleRoomAdapter adapter;
+    private List<Device> devices; // list an toàn để tránh NPE
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        if (Build.VERSION.SDK_INT >= 19) {
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
-        }
-        //make fully Android Transparent Status bar
-        if (Build.VERSION.SDK_INT >= 21) {
-            setWindowFlag(this, WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS, false);
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-        }
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Phải trỏ đúng layout mới bạn đã thay (có tvRoomTitle, ivBack, rvDevices, fabAddDevice)
         setContentView(R.layout.activity_room_details);
 
-        recyclerView = findViewById(R.id.recycler_view);
+        houseId = getIntent().getStringExtra("house_id");
+        roomId  = getIntent().getStringExtra("room_id");
+        room    = SmartRepository.get(this).getRoomById(houseId, roomId);
 
-        mAdapter = new SingleRoomAdapter(roomList, getApplicationContext());
-        RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
-        recyclerView.setLayoutManager(mLayoutManager);
-        recyclerView.setItemAnimator(new DefaultItemAnimator());
-        recyclerView.setAdapter(mAdapter);
+        // Header: title + back
+        TextView tvTitle = findViewById(R.id.tvRoomTitle);
+        View ivBack = findViewById(R.id.ivBack);
+        if (tvTitle != null) {
+            tvTitle.setText(room != null ? room.getName() : getString(R.string.app_name));
+        }
+        if (ivBack != null) {
+            ivBack.setOnClickListener(v -> onBackPressed());
+        }
 
-        prepareRoomData();
+        // RecyclerView
+        rv = findViewById(R.id.rvDevices);
+        rv.setLayoutManager(new LinearLayoutManager(this));
+
+        // Dữ liệu thiết bị (an toàn null)
+        devices = (room != null && room.getDevices() != null)
+                ? room.getDevices()
+                : new ArrayList<>();
+
+        adapter = new SingleRoomAdapter(devices);
+        rv.setAdapter(adapter);
+
+        // FAB thêm thiết bị
+        FloatingActionButton fab = findViewById(R.id.fabAddDevice);
+        if (fab != null) fab.setOnClickListener(v -> openAddDeviceDialog());
     }
 
-    private void prepareRoomData() {
-        Room room = new Room("1", "Light");
-        roomList.add(room);
-        room = new Room("2", "Fan");
-        roomList.add(room);
-        room = new Room("1", "Air Conditioner");
-        roomList.add(room);
-        room = new Room("2", "Table Light");
-        roomList.add(room);
-        room = new Room("1", "Stand Fan");
-        roomList.add(room);
-        room = new Room("2", "Footer Light");
-        roomList.add(room);
-        room = new Room("1", "TV");
-        roomList.add(room);
+    private void openAddDeviceDialog() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_device, null, false);
+        EditText edtName = view.findViewById(R.id.edtDeviceName);
+        Spinner spType   = view.findViewById(R.id.spDeviceType);
 
-        mAdapter.notifyDataSetChanged();
-    }
+        ArrayAdapter<CharSequence> typeAdapter = ArrayAdapter.createFromResource(
+                this, R.array.device_types, android.R.layout.simple_spinner_item);
+        typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spType.setAdapter(typeAdapter);
 
-    public void onBackClicked(View view) {
-        startActivity(new Intent(getApplicationContext(), MainActivity.class));
-        finish();
+        new AlertDialog.Builder(this)
+                .setTitle("Thêm thiết bị")
+                .setView(view)
+                .setNegativeButton("Huỷ", null)
+                .setPositiveButton("Thêm", (d, w) -> {
+                    String name = edtName.getText().toString().trim();
+                    String type = String.valueOf(spType.getSelectedItem());
+                    if (name.isEmpty()) return;
+
+                    // Nếu room null (không có context), bỏ qua để tránh crash
+                    if (room == null) return;
+
+                    Device dev = new Device(UUID.randomUUID().toString(), name, type, false);
+                    // Lưu vào repo
+                    SmartRepository.get(this).addDevice(houseId, roomId, dev);
+
+                    // Cập nhật UI
+                    int newPos = devices.size() - 1; // vì addDevice đã thêm vào list room.getDevices()
+                    if (newPos < 0) newPos = 0;
+                    adapter.notifyItemInserted(newPos);
+                    rv.smoothScrollToPosition(newPos);
+                })
+                .show();
     }
 }

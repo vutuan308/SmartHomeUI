@@ -12,17 +12,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SmarthomeUI"
         tools:targetApi="31">
+        <activity android:name=".smarthome.ui.activity.RoomDetailsActivity"/>
+        <activity android:name=".smarthome.ui.activity.HouseRoomsActivity"/>\
         <activity
-            android:name="com.example.smarthomeui.smarthome.ui.activity.MainActivity"
+            android:name=".smarthome.ui.activity.AllRoomsActivity"
+            android:exported="false" />
+        <activity android:name=".smarthome.ui.activity.HouseListActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name="com.example.smarthomeui.smarthome.ui.activity.RoomDetailsActivity"
-            android:exported="false" />
+
     </application>
 
 </manifest>

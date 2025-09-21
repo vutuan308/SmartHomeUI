@@ -17,13 +17,19 @@ import java.util.List;
 public class HouseAdapter extends RecyclerView.Adapter<HouseAdapter.VH> {
 
     public interface OnHouseClick { void onClick(House h); }
+    public interface OnHouseLongClick { void onLongClick(House h, int position); }
 
     private final List<House> data;
     private final OnHouseClick listener;
+    private final OnHouseLongClick longListener;
 
     public HouseAdapter(List<House> data, OnHouseClick l) {
+        this(data, l, null);
+    }
+    public HouseAdapter(List<House> data, OnHouseClick l, OnHouseLongClick ll) {
         this.data = data;
         this.listener = l;
+        this.longListener = ll;
     }
 
     @NonNull @Override
@@ -42,6 +48,15 @@ public class HouseAdapter extends RecyclerView.Adapter<HouseAdapter.VH> {
 
         h.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onClick(x);
+        });
+        h.itemView.setOnLongClickListener(v -> {
+            if (longListener != null) {
+                int pos = h.getBindingAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION)
+                    longListener.onLongClick(x, pos);
+                return true;
+            }
+            return false;
         });
     }
 

@@ -15,7 +15,8 @@
         android:textColor="@android:color/white"
         android:textStyle="bold"
         android:textSize="20sp"
-        android:padding="16dp"/>
+        android:padding="16dp"
+        tools:ignore="MissingConstraints" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvRoomsOfHouse"
@@ -97,7 +98,7 @@
             android:layout_weight="1"
             android:gravity="center">
 
-            <!-- THÊM ID CHO NÚT “+” -->
+            <!-- Nút ivPlus để dành cho chức năng khác sau này; không dùng để thêm phòng -->
             <ImageView
                 android:id="@+id/ivPlus"
                 android:layout_width="50dp"
@@ -155,4 +156,19 @@
         </LinearLayout>
     </LinearLayout>
     </LinearLayout>
+
+    <!-- FAB để thêm phòng, đặt ở góc dưới bên phải, cao hơn Bottom Nav -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAddRoom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/app_name"
+        app:srcCompat="@drawable/ic_plus"
+        app:tint="@android:color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottom_nav"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        app:backgroundTint="@color/colorPrimary" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,11 +1,13 @@
 package com.example.smarthomeui.smarthome.ui.activity;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -48,14 +50,52 @@ public class AllRoomsActivity extends AppCompatActivity {
         });
         rv.setAdapter(adapter);
 
-        // Nav: đánh dấu tab “Phòng” đang active & gắn action
+        // Nav: tab
         findViewById(R.id.ivHome).setOnClickListener(v ->
                 startActivity(new Intent(this, HouseListActivity.class)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)));
         findViewById(R.id.ivRooms).setSelected(true);
+        View ivSetting = findViewById(R.id.ivSetting);
+        if (ivSetting != null) ivSetting.setOnClickListener(v ->
+                startActivity(new Intent(this, SettingsActivity.class)));
+
+        // FAB thêm phòng trong danh sách phòng tổng hợp
+        View fab = findViewById(R.id.fabAddRoom);
+        if (fab != null) fab.setOnClickListener(v -> showAddRoomInAllDialog(adapter));
 
             // TODO: dialog Thêm Phòng/Thiết bị nếu muốn
 
+    }
+
+    private void showAddRoomInAllDialog(RoomsSectionAdapter adapter) {
+        View form = LayoutInflater.from(this).inflate(R.layout.dialog_room_add_all, null, false);
+        Spinner spHouse = form.findViewById(R.id.spHouse);
+        EditText etName = form.findViewById(R.id.etName);
+        EditText etDesc = form.findViewById(R.id.etDescription);
+
+        List<House> houses = SmartRepository.get(this).getHouses();
+        List<String> names = new ArrayList<>();
+        for (House h : houses) names.add(h.getName());
+        ArrayAdapter<String> spAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, names);
+        spHouse.setAdapter(spAdapter);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Thêm phòng")
+                .setView(form)
+                .setPositiveButton("Thêm", (d, w) -> {
+                    int idx = spHouse.getSelectedItemPosition();
+                    if (idx < 0 || idx >= houses.size()) return;
+                    House h = houses.get(idx);
+                    String name = etName.getText() == null ? null : etName.getText().toString();
+                    String desc = etDesc.getText() == null ? null : etDesc.getText().toString();
+                    Room r = SmartRepository.get(this).addRoom(h.getId(), name, R.drawable.ic_room_generic);
+                    if (r != null) {
+                        SmartRepository.get(this).updateRoom(h.getId(), r.getId(), null, desc);
+                        adapter.addRoomRow(h.getId(), h.getName(), r);
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 
     static class RoomsSectionAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -92,6 +132,10 @@ public class AllRoomsActivity extends AppCompatActivity {
                     i.putExtra("room_id",  r.getId());
                     v.getContext().startActivity(i);
                 });
+                vh.itemView.setOnLongClickListener(v -> {
+                    showRoomActionsDialog(vh, rr);
+                    return true;
+                });
             }
         }
 
@@ -106,6 +150,103 @@ public class AllRoomsActivity extends AppCompatActivity {
                 ivIcon=v.findViewById(R.id.ivRoomIcon);
                 tvName=v.findViewById(R.id.tvRoomName);
                 tvCount=v.findViewById(R.id.tvDeviceCount);
+            }
+        }
+
+        // Thêm một phòng vào đúng section theo houseId. Nếu chưa có header, tạo mới cuối danh sách.
+        void addRoomRow(String houseId, String houseName, Room room) {
+            int headerIndex = -1;
+            int insertAfter = -1;
+            for (int i = 0; i < data.size(); i++) {
+                Row row = data.get(i);
+                if (row instanceof HeaderRow && ((HeaderRow) row).houseId.equals(houseId)) {
+                    headerIndex = i;
+                    insertAfter = i;
+                } else if (row instanceof RoomRow && ((RoomRow) row).houseId.equals(houseId)) {
+                    insertAfter = i;
+                }
+            }
+            if (headerIndex == -1) {
+                int start = data.size();
+                data.add(new HeaderRow(houseId, houseName != null ? houseName : "Nhà"));
+                data.add(new RoomRow(houseId, room));
+                notifyItemRangeInserted(start, 2);
+            } else {
+                int insertPos = insertAfter + 1;
+                data.add(insertPos, new RoomRow(houseId, room));
+                notifyItemInserted(insertPos);
+            }
+        }
+
+        private void showRoomActionsDialog(RoomVH vh, RoomRow rr) {
+            final int adapterPos = vh.getBindingAdapterPosition();
+            if (adapterPos == RecyclerView.NO_POSITION) return;
+            final Context ctx = vh.itemView.getContext();
+            String[] actions = new String[]{"Sửa", "Xóa"};
+            new AlertDialog.Builder(ctx)
+                    .setTitle(rr.room.getName())
+                    .setItems(actions, (dialog, which) -> {
+                        if (which == 0) {
+                            showEditRoomDialog(vh, rr);
+                        } else if (which == 1) {
+                            new AlertDialog.Builder(ctx)
+                                    .setTitle("Xóa phòng")
+                                    .setMessage("Bạn có chắc muốn xóa phòng này?")
+                                    .setPositiveButton("Xóa", (d, w) -> {
+                                        boolean ok = SmartRepository.get(ctx).deleteRoom(rr.houseId, rr.room.getId());
+                                        if (ok) {
+                                            int pos = vh.getBindingAdapterPosition();
+                                            if (pos != RecyclerView.NO_POSITION) {
+                                                data.remove(pos);
+                                                notifyItemRemoved(pos);
+                                                // Nếu nhà này không còn phòng nào trong danh sách, xoá luôn header
+                                                maybeRemoveHeaderForHouse(rr.houseId);
+                                            }
+                                        }
+                                    })
+                                    .setNegativeButton("Hủy", null)
+                                    .show();
+                        }
+                    })
+                    .show();
+        }
+
+        private void showEditRoomDialog(RoomVH vh, RoomRow rr) {
+            final Context ctx = vh.itemView.getContext();
+            View form = LayoutInflater.from(ctx).inflate(R.layout.dialog_room_form, null, false);
+            EditText etName = form.findViewById(R.id.etName);
+            EditText etDesc = form.findViewById(R.id.etDescription);
+            etName.setText(rr.room.getName());
+            etDesc.setText(rr.room.getDescription());
+            new AlertDialog.Builder(ctx)
+                    .setTitle("Sửa phòng")
+                    .setView(form)
+                    .setPositiveButton("Lưu", (d, w) -> {
+                        String name = etName.getText() == null ? null : etName.getText().toString();
+                        String desc = etDesc.getText() == null ? null : etDesc.getText().toString();
+                        SmartRepository.get(ctx).updateRoom(rr.houseId, rr.room.getId(), name, desc);
+                        int pos = vh.getBindingAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) notifyItemChanged(pos);
+                    })
+                    .setNegativeButton("Hủy", null)
+                    .show();
+        }
+
+        private void maybeRemoveHeaderForHouse(String houseId) {
+            boolean hasAnyRoom = false;
+            for (Row row : data) {
+                if (row instanceof RoomRow && ((RoomRow) row).houseId.equals(houseId)) { hasAnyRoom = true; break; }
+            }
+            if (!hasAnyRoom) {
+                // tìm header tương ứng và xoá
+                for (int i = 0; i < data.size(); i++) {
+                    Row row = data.get(i);
+                    if (row instanceof HeaderRow && ((HeaderRow) row).houseId.equals(houseId)) {
+                        data.remove(i);
+                        notifyItemRemoved(i);
+                        break;
+                    }
+                }
             }
         }
     }

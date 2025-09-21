@@ -17,13 +17,19 @@ import java.util.List;
 public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
 
     public interface OnRoomClick { void onClick(Room r); }
+    public interface OnRoomLongClick { void onLongClick(Room r, int position); }
 
     private final List<Room> data;
     private final OnRoomClick listener;
+    private final OnRoomLongClick longListener;
 
     public RoomAdapter(List<Room> data, OnRoomClick l) {
+        this(data, l, null);
+    }
+    public RoomAdapter(List<Room> data, OnRoomClick l, OnRoomLongClick ll) {
         this.data = data;
         this.listener = l;
+        this.longListener = ll;
     }
 
     @NonNull @Override
@@ -42,6 +48,14 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
 
         h.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onClick(r);
+        });
+        h.itemView.setOnLongClickListener(v -> {
+            if (longListener != null) {
+                int pos = h.getBindingAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) longListener.onLongClick(r, pos);
+                return true;
+            }
+            return false;
         });
     }
 

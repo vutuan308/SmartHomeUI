@@ -99,11 +99,24 @@ public class SmartRepository {
     }
 
     /* ====================== HOUSES ====================== */
-    public List<House> getHouses() {
-        return new ArrayList<>(houses.values());
+    public List<House> getHouses() { return new ArrayList<>(houses.values()); }
+    public House getHouseById(String houseId) { return houses.get(houseId); }
+    /** Thêm một nhà mới đơn giản (icon mặc định) */
+    public House addHouse(String name) {
+        String id = UUID.randomUUID().toString();
+        House h = new House(id, (name == null || name.trim().isEmpty()) ? "Nhà mới" : name.trim(), R.drawable.home);
+        houses.put(id, h);
+        return h;
     }
-    public House getHouseById(String houseId) {
-        return houses.get(houseId);
+    public void updateHouse(String houseId, String name, String description) {
+        House h = houses.get(houseId);
+        if (h != null) {
+            if (name != null && !name.trim().isEmpty()) h.setName(name.trim());
+            h.setDescription(description);
+        }
+    }
+    public boolean deleteHouse(String houseId) {
+        return houses.remove(houseId) != null;
     }
 
     /* ====================== ROOMS ====================== */
@@ -122,6 +135,33 @@ public class SmartRepository {
         List<Room> res = new ArrayList<>();
         for (House h : houses.values()) res.addAll(h.getRooms());
         return res;
+    }
+    /** Thêm phòng mới cho 1 nhà */
+    public Room addRoom(String houseId, String name, int iconRes) {
+        House h = houses.get(houseId);
+        if (h == null) return null;
+        Room r = new Room(UUID.randomUUID().toString(),
+                (name == null || name.trim().isEmpty()) ? "Phòng mới" : name.trim(),
+                iconRes);
+        h.getRooms().add(r);
+        return r;
+    }
+    public void updateRoom(String houseId, String roomId, String name, String description) {
+        Room r = getRoomById(houseId, roomId);
+        if (r != null) {
+            if (name != null && !name.trim().isEmpty()) r.setName(name.trim());
+            r.setDescription(description);
+        }
+    }
+    public boolean deleteRoom(String houseId, String roomId) {
+        House h = houses.get(houseId);
+        if (h == null) return false;
+        Iterator<Room> it = h.getRooms().iterator();
+        while (it.hasNext()) {
+            Room r = it.next();
+            if (r.getId().equals(roomId)) { it.remove(); return true; }
+        }
+        return false;
     }
 
     /* ====================== DEVICES ====================== */

@@ -8,6 +8,7 @@ public class Room implements Serializable {
     private String id;
     private String name;
     private int iconRes;
+    private String description; // mô tả tuỳ chọn
     private final List<Device> devices = new ArrayList<>();
 
     public Room(String id, String name, int iconRes) {
@@ -21,4 +22,8 @@ public class Room implements Serializable {
     public int getIconRes() { return iconRes; }
     public List<Device> getDevices() { return devices; }
     public int getDeviceCount() { return devices.size(); }
+
+    public String getDescription() { return description; }
+    public void setName(String name) { this.name = name; }
+    public void setDescription(String description) { this.description = description; }
 }

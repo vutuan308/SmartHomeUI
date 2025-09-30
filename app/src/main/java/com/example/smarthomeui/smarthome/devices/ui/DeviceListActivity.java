@@ -2,6 +2,7 @@ package com.example.smarthomeui.smarthome.devices.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.ImageView;
 
 
 import androidx.annotation.Nullable;
@@ -14,6 +15,9 @@ import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.devices.adapter.DeviceAdapter;
 import com.example.smarthomeui.smarthome.devices.data.DeviceRepository;
 import com.example.smarthomeui.smarthome.devices.model.Device;
+import com.example.smarthomeui.smarthome.ui.activity.AllRoomsActivity;
+import com.example.smarthomeui.smarthome.ui.activity.HouseListActivity;
+import com.example.smarthomeui.smarthome.ui.activity.SettingsActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
@@ -24,13 +28,17 @@ public class DeviceListActivity extends AppCompatActivity {
     private final List<Device> data = new ArrayList<>();
     private DeviceAdapter adapter;
 
-
+    private  FloatingActionButton add;
+    private RecyclerView rv;
+    private ImageView ivHome;
+    private ImageView ivRooms;
+    private ImageView ivSetting;
     @Override protected void onCreate(@Nullable Bundle b) {
         super.onCreate(b);
         setContentView(R.layout.activity_device_list);
 
+        init();
 
-        RecyclerView rv = findViewById(R.id.recycler);
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new DeviceAdapter(data,
                 d -> openForm(d.getId()),
@@ -40,8 +48,22 @@ public class DeviceListActivity extends AppCompatActivity {
         rv.setAdapter(adapter);
 
 
-        FloatingActionButton add = findViewById(R.id.btnAdd);
+        //Chuc nang navbar
         add.setOnClickListener(v -> openForm(null));
+
+        ivHome.setOnClickListener(v -> startActivity(new Intent(this, HouseListActivity.class)));
+
+        ivRooms.setOnClickListener(v -> startActivity(new Intent(this, AllRoomsActivity.class)));
+
+        ivSetting.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+    }
+
+    private void init(){
+        rv = findViewById(R.id.recycler);
+        add = findViewById(R.id.btnAdd);
+        ivHome = findViewById(R.id.ivHome);
+        ivRooms = findViewById(R.id.ivRooms);
+        ivSetting = findViewById(R.id.ivSetting);
     }
 
 

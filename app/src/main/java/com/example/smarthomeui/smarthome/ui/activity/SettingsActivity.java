@@ -10,13 +10,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.data.SmartRepository;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class SettingsActivity extends AppCompatActivity {
     @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
-
+        View cardSecurity = findViewById(R.id.cardSecurity);
+        cardSecurity.setOnClickListener(v -> showSecurityOptions());
         setTitle("Cài đặt");
+        View back = findViewById(R.id.ivBack);
+        if (back != null) back.setOnClickListener(v -> onBackPressed());
 
         // Demo dữ liệu người dùng
         ((TextView) findViewById(R.id.tvUserName)).setText("Người dùng demo");
@@ -34,4 +38,20 @@ public class SettingsActivity extends AppCompatActivity {
             finish();
         });
     }
+
+    private void showSecurityOptions() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Bảo mật & quyền riêng tư")
+                .setItems(new CharSequence[]{"Cập nhật thông tin", "Đổi mật khẩu"}, (d, which) -> {
+                    if (which == 0) {
+                        // Mở màn cập nhật thông tin
+                        startActivity(new Intent(this, UpdateAccountActivity.class));
+                    } else {
+                        // Mở màn đổi mật khẩu
+                        startActivity(new Intent(this, ChangePasswordActivity.class));
+                    }
+                })
+                .show();
+    }
+
 }

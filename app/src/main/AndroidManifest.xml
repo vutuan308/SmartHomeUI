@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -22,6 +24,14 @@
         <activity android:name=".smarthome.ui.activity.RegisterActivity"
             android:exported="false" />
         <activity android:name=".smarthome.ui.activity.LoginActivity"
+            android:exported="false" />
+        <activity android:name=".smarthome.ui.activity.AdminDashboardActivity"
+            android:exported="false" />
+        <activity android:name=".smarthome.ui.activity.UserManagementActivity"
+            android:exported="false" />
+        <activity android:name=".smarthome.ui.activity.RoomManagementActivity"
+            android:exported="false" />
+        <activity android:name=".smarthome.ui.activity.DeviceManagementActivity"
             android:exported="false" />
         <activity android:name=".smarthome.ui.activity.HouseListActivity"
             android:exported="true">

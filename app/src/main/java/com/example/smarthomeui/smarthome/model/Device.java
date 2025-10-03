@@ -2,76 +2,109 @@ package com.example.smarthomeui.smarthome.model;
 
 import java.io.Serializable;
 
+/**
+ * Device model class
+ * Đại diện cho thiết bị IoT trong hệ thống smart home
+ */
 public class Device implements Serializable {
     private String id;
     private String name;
-    private String type; // "Light" | "Fan" | "AC" | ...
-    private boolean on;
+    private String room;
+    private String type;
+    private boolean isOnline;
+    private int value; // Giá trị hiện tại (%, độ sáng, nhiệt độ...)
+    private String powerConsumption;
+    private String lastActivity;
+    private String status;
 
-    // ---- Thuộc tính mở rộng theo loại ----
-    // Light
-    private int brightness = 50;        // 0..100
-    private int color = 0xFFFFFFFF;     // ARGB (mặc định trắng)
+    // Additional properties for compatibility with existing code
+    private boolean isOn;
+    private int brightness = 100;
+    private int speed = 1;
+    private int color = 0xFFFFFFFF; // Default white
 
-    // Fan
-    private int speed = 1;              // 0..3
+    public Device() {}
 
-    // AC
-    private int temperature = 24;       // 16..30 (tuỳ bạn)
-    private String mode = "cool";       // "cool" | "dry" | "fan"...
-
-    // ---- Constructors ----
-    public Device(String id, String name, String type, boolean on) {
-        this.id = id; this.name = name; this.type = type; this.on = on;
+    public Device(String id, String name, String room, String type, boolean isOnline, int value, String powerConsumption) {
+        this.id = id;
+        this.name = name;
+        this.room = room;
+        this.type = type;
+        this.isOnline = isOnline;
+        this.isOn = isOnline;
+        this.value = value;
+        this.powerConsumption = powerConsumption;
+        this.lastActivity = "5 phút";
+        this.status = isOnline ? "Online" : "Offline";
     }
 
-    // Tuỳ chọn: constructor đầy đủ nếu cần khởi tạo nhanh
-    public Device(String id, String name, String type, boolean on,
-                  int brightness, int color, int speed, int temperature, String mode) {
-        this(id, name, type, on);
-        this.brightness = brightness;
-        this.color = color;
-        this.speed = speed;
-        this.mode = mode;
+    // Constructor for compatibility with existing code
+    public Device(String id, String name, String type, boolean isOn) {
+        this(id, name, "", type, isOn, isOn ? 100 : 0, "0W");
     }
 
-    // ---- Helpers nhận dạng loại ----
-    public boolean isLight() {
-        String t = type == null ? "" : type.toLowerCase();
-        return t.contains("light") || t.contains("lamp") || t.contains("đèn") || t.contains("den");
-    }
-    public boolean isFan() {
-        String t = type == null ? "" : type.toLowerCase();
-        return t.contains("fan") || t.contains("quạt") || t.contains("quat");
-    }
-
-
-    // ---- Getters/Setters cơ bản ----
+    // Getters and Setters
     public String getId() { return id; }
-    public String getName() { return name; }
-    public String getType() { return type; }
-    public boolean isOn() { return on; }
-    public void setName(String name) { this.name = name; }
-    public void setType(String type) { this.type = type; }
-    public void setOn(boolean on) { this.on = on; }
+    public void setId(String id) { this.id = id; }
 
-    // ---- Getters/Setters mở rộng ----
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getRoom() { return room; }
+    public void setRoom(String room) { this.room = room; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public boolean isOnline() { return isOnline; }
+    public void setOnline(boolean online) {
+        isOnline = online;
+        isOn = online;
+        this.status = online ? "Online" : "Offline";
+    }
+
+    public int getValue() { return value; }
+    public void setValue(int value) { this.value = value; }
+
+    public String getPowerConsumption() { return powerConsumption; }
+    public void setPowerConsumption(String powerConsumption) { this.powerConsumption = powerConsumption; }
+
+    public String getLastActivity() { return lastActivity; }
+    public void setLastActivity(String lastActivity) { this.lastActivity = lastActivity; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    // Compatibility methods for existing code
+    public boolean isOn() { return isOn; }
+    public void setOn(boolean on) {
+        this.isOn = on;
+        this.isOnline = on;
+        this.status = on ? "Online" : "Offline";
+    }
+
     public int getBrightness() { return brightness; }
-    public void setBrightness(int brightness) { this.brightness = clamp(brightness, 0, 100); }
+    public void setBrightness(int brightness) { this.brightness = brightness; }
+
+    public int getSpeed() { return speed; }
+    public void setSpeed(int speed) { this.speed = speed; }
 
     public int getColor() { return color; }
     public void setColor(int color) { this.color = color; }
 
-    public int getSpeed() { return speed; }
-    public void setSpeed(int speed) { this.speed = clamp(speed, 0, 3); }
+    public boolean isLight() {
+        return type != null && type.toLowerCase().contains("light");
+    }
 
+    public boolean isFan() {
+        return type != null && type.toLowerCase().contains("fan");
+    }
 
+    public String getValueText() {
+        return value + "%";
+    }
 
-    public String getMode() { return mode; }
-    public void setMode(String mode) { this.mode = mode; }
-
-    // ---- utils ----
-    private static int clamp(int v, int min, int max) {
-        return Math.max(min, Math.min(max, v));
+    public int getStatusColor() {
+        return isOnline ? android.R.color.holo_green_light : android.R.color.holo_red_light;
     }
 }

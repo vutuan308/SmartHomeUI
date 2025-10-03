@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -17,10 +18,17 @@ import com.example.smarthomeui.smarthome.data.SmartRepository;
 import com.example.smarthomeui.smarthome.model.House;
 import java.util.List;
 
-public class HouseListActivity extends AppCompatActivity {
-    @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
+public class HouseListActivity extends BaseActivity {
+
+    private TextView tvUserEmail, tvUserName;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main); // dùng layout clone từ activity_main
+
+        initUserViews();
+        loadUserProfile(); // Gọi getUserProfile để hiển thị thông tin user
 
         RecyclerView rv = findViewById(R.id.recycler_view);
         rv.setLayoutManager(new GridLayoutManager(this, 2));
@@ -49,6 +57,47 @@ public class HouseListActivity extends AppCompatActivity {
         View ivSetting = findViewById(R.id.ivSetting);
         if (ivSetting != null) ivSetting.setOnClickListener(v ->
                 startActivity(new Intent(this, SettingsActivity.class)));
+    }
+
+    /**
+     * Khởi tạo TextView để hiển thị thông tin user
+     */
+    private void initUserViews() {
+        // Tìm TextView trong layout để hiển thị thông tin user
+        tvUserEmail = findViewById(R.id.tvUserEmail);
+        tvUserName = findViewById(R.id.tvUserName);
+    }
+
+    /**
+     * Gọi API lấy thông tin profile và hiển thị lên view
+     */
+    private void loadUserProfile() {
+        getUserProfile(
+            // Callback khi thành công
+            profile -> {
+                // Hiển thị email và name trên TextView
+                if (tvUserEmail != null) {
+                    tvUserEmail.setText(profile.getEmail());
+                }
+                if (tvUserName != null) {
+                    tvUserName.setText(profile.getName() != null ? profile.getName() : "User");
+                }
+            },
+            // Callback khi có lỗi
+            errorMessage -> {
+                // Hiển thị thông tin từ SharedPreferences nếu API lỗi
+                String email = getCurrentUserEmail();
+                if (tvUserEmail != null && email != null) {
+                    tvUserEmail.setText(email);
+                }
+                if (tvUserName != null) {
+                    tvUserName.setText("User");
+                }
+
+                // Log lỗi (không hiển thị Toast để tránh làm phiền user)
+                android.util.Log.e("HouseList", "Lỗi load profile: " + errorMessage);
+            }
+        );
     }
 
     private void showAddHouseDialog(List<House> houses, HouseAdapter adapter) {

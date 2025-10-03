@@ -5,7 +5,7 @@ import android.graphics.Canvas;
 import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.view.Gravity;
-import android.widget.TextView;
+import androidx.appcompat.widget.AppCompatTextView;
 
 /**
  * Smart Home
@@ -13,7 +13,7 @@ import android.widget.TextView;
  * Created on 27-OCT-2019.
  * Created by : Santosh Kumar Dash:- http://santoshdash.epizy.com
  */
-public class VerticalTextView extends TextView {
+public class VerticalTextView extends AppCompatTextView {
     final boolean topDown;
 
     public VerticalTextView(Context context, AttributeSet attrs) {
@@ -22,8 +22,9 @@ public class VerticalTextView extends TextView {
         if (Gravity.isVertical(gravity) && (gravity & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.BOTTOM) {
             setGravity((gravity & Gravity.HORIZONTAL_GRAVITY_MASK) | Gravity.TOP);
             topDown = false;
-        } else
+        } else {
             topDown = true;
+        }
     }
 
     @Override

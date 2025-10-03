@@ -3,58 +3,60 @@ package com.example.smarthomeui.smarthome.ui.activity;
 import android.content.Intent;
 import android.os.Bundle;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.smarthomeui.R;
-import com.example.smarthomeui.smarthome.adapter.RoomAdapter;
-import com.example.smarthomeui.smarthome.data.SmartRepository;
-import com.example.smarthomeui.smarthome.model.Room;
-
-import java.util.List;
+import com.example.smarthomeui.smarthome.utils.UserManager;
 
 /**
- * Smart Home - Main Activity
- * Màn hình chính hiển thị tất cả phòng từ mọi nhà
- * Note: Hiện tại launcher activity là HouseListActivity
+ * MainActivity - Điểm khởi đầu của ứng dụng
+ * Kiểm tra trạng thái đăng nhập và chuyển hướng tương ứng
  */
 public class MainActivity extends AppCompatActivity {
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
-        initViews();
-        setupRoomsList();
+        // Không cần setContentView vì activity này chỉ để điều hướng
+        checkLoginStatus();
     }
 
     /**
-     * Khởi tạo các view components
+     * Kiểm tra trạng thái đăng nhập và điều hướng
      */
-    private void initViews() {
-        // Đánh dấu tab Home là active
-        findViewById(R.id.ivHome).setSelected(true);
+    private void checkLoginStatus() {
+        UserManager userManager = new UserManager(this);
+
+        if (userManager.isLoggedIn()) {
+            // User đã đăng nhập và token còn hạn
+            String userRole = userManager.getUserRole();
+            navigateToHome(userRole);
+        } else {
+            // User chưa đăng nhập hoặc token đã hết hạn
+            navigateToLogin();
+        }
     }
 
     /**
-     * Thiết lập danh sách phòng từ tất cả các nhà
+     * Chuyển đến màn hình chính dựa trên role
      */
-    private void setupRoomsList() {
-        RecyclerView rv = findViewById(R.id.recycler_view);
-        rv.setLayoutManager(new GridLayoutManager(this, 2));
+    private void navigateToHome(String userRole) {
+        Intent intent;
+        if ("admin".equals(userRole)) {
+            intent = new Intent(this, AdminDashboardActivity.class);
+        } else {
+            intent = new Intent(this, HouseListActivity.class);
+        }
+        startActivity(intent);
+        finish();
+    }
 
-        // Lấy tất cả phòng từ SmartRepository thay vì RoomRepository
-        List<Room> rooms = SmartRepository.get(this).getAllRooms();
-        RoomAdapter adapter = new RoomAdapter(rooms, room -> {
-            // TODO: Cần truyền thêm house_id khi navigate đến RoomDetails
-            Intent i = new Intent(MainActivity.this, RoomDetailsActivity.class);
-            i.putExtra("room_id", room.getId());
-            // i.putExtra("house_id", houseId); // Cần tìm cách lấy house_id
-            startActivity(i);
-        });
-        rv.setAdapter(adapter);
+    /**
+     * Chuyển đến màn hình đăng nhập
+     */
+    private void navigateToLogin() {
+        Intent intent = new Intent(this, LoginActivity.class);
+        startActivity(intent);
+        finish();
     }
 }

@@ -32,32 +32,31 @@ public class SmartRepository {
 
         Room a_living = new Room(UUID.randomUUID().toString(), "Phòng khách", R.drawable.ic_room_living);
         // Đèn trần (bật, 80%, màu ấm)
-        a_living.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Đèn trần", "Light", true,
-                80, 0xFFF2C179, 0, 0, null
-        ));
-        // Đèn led hắt trần (tắt, 30%, xanh dương)
-        a_living.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Đèn led hắt", "Light", false,
-                30, 0xFF4F8CFF, 0, 0, null
-        ));
-        // Quạt trần (bật, tốc độ 2)
-        a_living.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Quạt trần", "Fan", true,
-                0, 0, 2, 0, null
-        ));
+        Device device1 = new Device(UUID.randomUUID().toString(), "Đèn trần", "Phòng khách", "Light", true, 80, "12W");
+        device1.setBrightness(80);
+        device1.setColor(0xFFF2C179);
+        a_living.getDevices().add(device1);
 
+        // Đèn led hắt trần (tắt, 30%, xanh dương)
+        Device device2 = new Device(UUID.randomUUID().toString(), "Đèn led hắt", "Phòng khách", "Light", false, 30, "8W");
+        device2.setBrightness(30);
+        device2.setColor(0xFF4F8CFF);
+        a_living.getDevices().add(device2);
+
+        // Quạt trần (bật, tốc độ 2)
+        Device device3 = new Device(UUID.randomUUID().toString(), "Quạt trần", "Phòng khách", "Fan", true, 100, "75W");
+        device3.setSpeed(2);
+        a_living.getDevices().add(device3);
 
         Room a_bed = new Room(UUID.randomUUID().toString(), "Phòng ngủ", R.drawable.ic_room_bed);
-        a_bed.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Đèn ngủ", "Light", true,
-                20, 0xFFF2C179, 0, 0, null
-        ));
-        a_bed.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Quạt hộp", "Fan", false,
-                0, 0, 1, 0, null
-        ));
+        Device device4 = new Device(UUID.randomUUID().toString(), "Đèn ngủ", "Phòng ngủ", "Light", true, 20, "5W");
+        device4.setBrightness(20);
+        device4.setColor(0xFFF2C179);
+        a_bed.getDevices().add(device4);
 
+        Device device5 = new Device(UUID.randomUUID().toString(), "Quạt hộp", "Phòng ngủ", "Fan", false, 0, "45W");
+        device5.setSpeed(1);
+        a_bed.getDevices().add(device5);
 
         houseA.getRooms().add(a_living);
         houseA.getRooms().add(a_bed);
@@ -66,25 +65,25 @@ public class SmartRepository {
         House houseB = new House(UUID.randomUUID().toString(), "Biệt thự Q.7", R.drawable.home);
 
         Room b_kitchen = new Room(UUID.randomUUID().toString(), "Bếp", R.drawable.ic_room_kitchen);
-        b_kitchen.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Đèn bếp", "Light", true,
-                70, 0xFFF2C179, 0, 0, null
-        ));
-        b_kitchen.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Quạt hút", "Fan", true,
-                0, 0, 3, 0, null
-        ));
+        Device device6 = new Device(UUID.randomUUID().toString(), "Đèn bếp", "Bếp", "Light", true, 70, "15W");
+        device6.setBrightness(70);
+        device6.setColor(0xFFF2C179);
+        b_kitchen.getDevices().add(device6);
+
+        Device device7 = new Device(UUID.randomUUID().toString(), "Quạt hút", "Bếp", "Fan", true, 100, "30W");
+        device7.setSpeed(3);
+        b_kitchen.getDevices().add(device7);
 
         Room b_office = new Room(UUID.randomUUID().toString(), "Phòng làm việc", R.drawable.ic_room_generic);
-        b_office.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Đèn bàn", "Light", true,
-                60, 0xFFFFFFFF, 0, 0, null
-        ));
+        Device device8 = new Device(UUID.randomUUID().toString(), "Đèn bàn", "Phòng làm việc", "Light", true, 60, "10W");
+        device8.setBrightness(60);
+        device8.setColor(0xFFFFFFFF);
+        b_office.getDevices().add(device8);
 
-        b_office.getDevices().add(new Device(
-                UUID.randomUUID().toString(), "Đèn RGB", "Light", true,
-                75, 0xFF4F8CFF, 0, 0, null
-        ));
+        Device device9 = new Device(UUID.randomUUID().toString(), "Đèn RGB", "Phòng làm việc", "Light", true, 75, "12W");
+        device9.setBrightness(75);
+        device9.setColor(0xFF4F8CFF);
+        b_office.getDevices().add(device9);
 
         houseB.getRooms().add(b_kitchen);
         houseB.getRooms().add(b_office);

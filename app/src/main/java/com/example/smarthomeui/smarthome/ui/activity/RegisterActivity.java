@@ -11,6 +11,14 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.smarthomeui.R;
+import com.example.smarthomeui.smarthome.network.RegisterRequest;
+import com.example.smarthomeui.smarthome.network.RegisterResponse;
+import com.example.smarthomeui.smarthome.network.Api;
+import com.example.smarthomeui.smarthome.network.ApiClient;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Smart Home - Register Activity
@@ -40,7 +48,6 @@ public class RegisterActivity extends AppCompatActivity {
 
     /**
      * Xử lý sự kiện khi người dùng ấn nút Đăng ký
-     * TODO: Tích hợp API đăng ký từ backend
      */
     public void onRegisterClicked(View view) {
         // Lấy thông tin từ form
@@ -55,7 +62,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         // Thực hiện đăng ký
-        performRegister(fullName, email, password);
+        performRegister(fullName, email, password, confirmPassword);
     }
 
     /**
@@ -118,38 +125,39 @@ public class RegisterActivity extends AppCompatActivity {
 
     /**
      * Thực hiện đăng ký tài khoản
-     * TODO: Call API đăng ký thật từ backend
      * @param fullName Họ và tên
      * @param email Email
      * @param password Mật khẩu
+     * @param confirmPassword Xác nhận mật khẩu
      */
-    private void performRegister(String fullName, String email, String password) {
-        // TODO: Call API đăng ký
-        // RegisterRequest request = new RegisterRequest(fullName, email, password);
-        // apiService.register(request).enqueue(new Callback<ApiResponse>() {
-        //     @Override
-        //     public void onResponse(Call<ApiResponse> call, Response<ApiResponse> response) {
-        //         if (response.isSuccessful() && response.body() != null) {
-        //             ApiResponse registerResponse = response.body();
-        //             if (registerResponse.isSuccess()) {
-        //                 showSuccess("Đăng ký thành công! Vui lòng đăng nhập.");
-        //                 navigateToLogin(email);
-        //             } else {
-        //                 showError(registerResponse.getMessage());
-        //             }
-        //         } else {
-        //             showError("Đăng ký thất bại. Vui lòng thử lại.");
-        //         }
-        //     }
-        //     @Override
-        //     public void onFailure(Call<ApiResponse> call, Throwable t) {
-        //         showError("Lỗi kết nối. Vui lòng thử lại.");
-        //     }
-        // });
+    private void performRegister(String fullName, String email, String password, String confirmPassword) {
+        // Tạo request object với email, password, confirmPassword
+        RegisterRequest request = new RegisterRequest(email, password, confirmPassword);
 
-        // Tạm thời: Đăng ký thành công để test UI
-        showSuccess("Đăng ký thành công! Vui lòng đăng nhập.");
-        navigateToLogin(email);
+        // Call API đăng ký
+        ApiClient.getClient().create(Api.class)
+            .register(request)
+            .enqueue(new Callback<RegisterResponse>() {
+                @Override
+                public void onResponse(Call<RegisterResponse> call, Response<RegisterResponse> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        RegisterResponse registerResponse = response.body();
+                        if (registerResponse.isSuccess()) {
+                            showSuccess("Đăng ký thành công! Vui lòng đăng nhập.");
+                            navigateToLogin(email);
+                        } else {
+                            showError(registerResponse.getMessage());
+                        }
+                    } else {
+                        showError("Đăng ký thất bại. Vui lòng thử lại.");
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<RegisterResponse> call, Throwable t) {
+                    showError("Lỗi kết nối: " + t.getMessage());
+                }
+            });
     }
 
     /**

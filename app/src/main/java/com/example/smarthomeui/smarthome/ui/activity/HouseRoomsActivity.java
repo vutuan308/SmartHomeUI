@@ -27,6 +27,8 @@ public class HouseRoomsActivity extends AppCompatActivity {
     @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_house_rooms);
+        View back = findViewById(R.id.ivBack);
+        if (back != null) back.setOnClickListener(v -> onBackPressed());
 
         houseId = getIntent().getStringExtra("house_id");
         House h = SmartRepository.get(this).getHouseById(houseId);
@@ -37,6 +39,7 @@ public class HouseRoomsActivity extends AppCompatActivity {
         RecyclerView rv = findViewById(R.id.rvRoomsOfHouse);
         rv.setLayoutManager(new GridLayoutManager(this, 2));
         final List<Room> rooms = SmartRepository.get(this).getRooms(houseId);
+
         RoomAdapter adapter = new RoomAdapter(rooms, room -> {
             Intent i = new Intent(HouseRoomsActivity.this, RoomDetailsActivity.class);
             i.putExtra("house_id", houseId);
@@ -53,7 +56,8 @@ public class HouseRoomsActivity extends AppCompatActivity {
         // Không dùng ivPlus cho thêm phòng; sử dụng FAB riêng
         View fab = findViewById(R.id.fabAddRoom);
         if (fab != null) fab.setOnClickListener(v -> showAddRoomDialog(rooms, adapter));
-
+        findViewById(R.id.ivDevices).setOnClickListener(v ->
+                startActivity(new Intent(this, DeviceInventoryActivity.class)));
         findViewById(R.id.ivRooms).setOnClickListener(v ->
                 startActivity(new Intent(this, AllRoomsActivity.class)));
         findViewById(R.id.ivHome).setOnClickListener(v ->

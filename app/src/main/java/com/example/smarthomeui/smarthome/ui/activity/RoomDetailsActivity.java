@@ -1,5 +1,6 @@
 package com.example.smarthomeui.smarthome.ui.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,7 +25,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class RoomDetailsActivity extends AppCompatActivity {
 
@@ -34,7 +34,7 @@ public class RoomDetailsActivity extends AppCompatActivity {
 
     private RecyclerView rv;
     private SingleRoomAdapter adapter;
-    private List<Device> devices;   // tham chiếu list thiết bị của room
+    private List<Device> devices;   // list thiết bị thuộc phòng
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -55,10 +55,8 @@ public class RoomDetailsActivity extends AppCompatActivity {
         rv = findViewById(R.id.rvDevices);
         rv.setLayoutManager(new LinearLayoutManager(this));
 
-        // Lấy danh sách thiết bị an toàn
         devices = (room != null && room.getDevices() != null) ? room.getDevices() : new ArrayList<>();
 
-        // Adapter + click mở điều khiển
         adapter = new SingleRoomAdapter(devices, (device, pos) -> {
             DeviceControlBottomSheet.newInstance(device, changed -> {
                 int idx = pos;
@@ -66,15 +64,59 @@ public class RoomDetailsActivity extends AppCompatActivity {
                 if (idx >= 0) adapter.notifyItemChanged(idx);
             }).show(getSupportFragmentManager(), "device_control");
         });
-
         rv.setAdapter(adapter);
 
-        // FAB thêm thiết bị
+        // FAB: LẤY THIẾT BỊ TỪ KHO
         FloatingActionButton fab = findViewById(R.id.fabAddDevice);
-        if (fab != null) fab.setOnClickListener(v -> openAddDeviceDialog());
+        if (fab != null) fab.setOnClickListener(v -> openPickFromInventory());
     }
 
-    private void openAddDeviceDialog() {
+    /** Mở dialog chọn 1 thiết bị từ Kho và gán vào phòng */
+    private void openPickFromInventory() {
+        List<Device> inv = SmartRepository.get(this).getInventory();
+        if (inv == null || inv.isEmpty()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Kho trống")
+                    .setMessage("Hiện chưa có thiết bị nào trong Kho. Bạn muốn mở Kho để thêm mới không?")
+                    .setNegativeButton("Đóng", null)
+                    .setPositiveButton("Mở Kho", (d, w) ->
+                            startActivity(new Intent(this, DeviceInventoryActivity.class)))
+                    .show();
+            return;
+        }
+
+        String[] items = new String[inv.size()];
+        for (int i = 0; i < inv.size(); i++) {
+            Device di = inv.get(i);
+            items[i] = di.getName() + " • " + (di.getType() == null ? "Unknown" : di.getType());
+        }
+        final int[] selected = {0};
+
+        new AlertDialog.Builder(this)
+                .setTitle("Chọn thiết bị từ Kho")
+                .setSingleChoiceItems(items, 0, (dlg, which) -> selected[0] = which)
+                .setNegativeButton("Huỷ", null)
+                .setPositiveButton("Thêm vào phòng", (dlg, w) -> {
+                    Device picked = inv.get(selected[0]);
+
+                    // Gán vào phòng (removeFromInventory = true: lấy ra khỏi kho)
+                    SmartRepository.get(this).assignInventoryDeviceToRoom(
+                            picked.getId(), houseId, roomId, /*removeFromInventory*/ false
+                    );
+
+                    // Cập nhật UI (thiết bị đã được thêm vào list của room)
+                    int newPos = devices.size() - 1;
+                    if (newPos < 0) newPos = 0;
+                    adapter.notifyItemInserted(newPos);
+                    rv.smoothScrollToPosition(newPos);
+                })
+                .show();
+    }
+
+    /* Nếu vẫn muốn giữ dialog tạo “thiết bị mới” thì để lại hàm cũ,
+       còn bây giờ đã chuyển sang lấy từ Kho nên không dùng nữa. */
+    @SuppressWarnings("unused")
+    private void openAddDeviceDialog_OLD() {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_device, null, false);
         EditText edtName = view.findViewById(R.id.edtDeviceName);
         Spinner spType   = view.findViewById(R.id.spDeviceType);
@@ -85,7 +127,7 @@ public class RoomDetailsActivity extends AppCompatActivity {
         spType.setAdapter(typeAdapter);
 
         new AlertDialog.Builder(this)
-                .setTitle("Thêm thiết bị")
+                .setTitle("Thêm thiết bị (cũ)")
                 .setView(view)
                 .setNegativeButton("Huỷ", null)
                 .setPositiveButton("Thêm", (d, w) -> {
@@ -93,13 +135,12 @@ public class RoomDetailsActivity extends AppCompatActivity {
                     String type = String.valueOf(spType.getSelectedItem());
                     if (name.isEmpty() || room == null) return;
 
-                    // Tạo device mẫu (đặt sáng 100% nếu là đèn)
-                    Device dev = new Device(UUID.randomUUID().toString(), name, type, false);
-                    if (type.equalsIgnoreCase("Light")) dev.setBrightness(100);
+                    Device dev = new Device(java.util.UUID.randomUUID().toString(), name, type, false);
+                    if ("Light".equalsIgnoreCase(type)) dev.setBrightness(100);
 
                     SmartRepository.get(this).addDevice(houseId, roomId, dev);
 
-                    int newPos = devices.size() - 1;   // đã được add vào list của room
+                    int newPos = devices.size() - 1;
                     if (newPos < 0) newPos = 0;
                     adapter.notifyItemInserted(newPos);
                     rv.smoothScrollToPosition(newPos);

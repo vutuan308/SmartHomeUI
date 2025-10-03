@@ -4,6 +4,9 @@
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
+    <style name="ThemeOverlay.Material3.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <!-- Bạn có thể tinh chỉnh màu chữ/nền ở đây nếu muốn -->
+    </style>
 
     <style name="Theme.SmarthomeUI" parent="Base.Theme.SmarthomeUI" />
 </resources>

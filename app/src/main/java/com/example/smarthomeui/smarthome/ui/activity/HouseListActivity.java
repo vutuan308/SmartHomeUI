@@ -52,6 +52,8 @@ public class HouseListActivity extends BaseActivity {
         // Không dùng ivPlus; dùng FAB riêng để thêm nhà
         View fab = findViewById(R.id.fabAddHouse);
         if (fab != null) fab.setOnClickListener(v -> showAddHouseDialog(houses, adapter));
+        findViewById(R.id.ivDevices).setOnClickListener(v ->
+                startActivity(new Intent(this, DeviceInventoryActivity.class)));
 
         // Nút cài đặt
         View ivSetting = findViewById(R.id.ivSetting);

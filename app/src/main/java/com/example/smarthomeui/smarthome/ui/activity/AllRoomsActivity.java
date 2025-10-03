@@ -27,6 +27,8 @@ public class AllRoomsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_house_rooms);    // <— dùng layout bạn muốn
         setTitle("Danh sách phòng");
+        View back = findViewById(R.id.ivBack);
+        if (back != null) back.setOnClickListener(v -> onBackPressed());
 
         TextView title = findViewById(R.id.tvHouseTitle);
         if (title != null) title.setText("Danh sách phòng");
@@ -51,6 +53,8 @@ public class AllRoomsActivity extends AppCompatActivity {
         rv.setAdapter(adapter);
 
         // Nav: tab
+        findViewById(R.id.ivDevices).setOnClickListener(v ->
+                startActivity(new Intent(this, DeviceInventoryActivity.class)));
         findViewById(R.id.ivHome).setOnClickListener(v ->
                 startActivity(new Intent(this, HouseListActivity.class)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)));

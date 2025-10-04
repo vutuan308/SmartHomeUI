@@ -105,6 +105,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
             String type = chip.getText().toString();
 
             Device dev = new Device(UUID.randomUUID().toString(), name, type, false);
+            dev.setToken(token); // Thêm set token
             // map capabilities theo type
             String lower = type.toLowerCase(Locale.US);
             if (lower.contains("light")) {

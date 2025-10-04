@@ -14,6 +14,9 @@ public class SmartRepository {
     private static SmartRepository instance;
     private final Map<String, House> houses = new LinkedHashMap<>();
 
+    // Thêm inventory để lưu trữ thiết bị chưa được gán vào phòng
+    private final List<Device> inventory = new ArrayList<>();
+
     private SmartRepository(Context ctx) {
         seed(); // khởi tạo dữ liệu mẫu
     }
@@ -180,5 +183,81 @@ public class SmartRepository {
             for (Room r : h.getRooms()) res.addAll(r.getDevices());
         }
         return res;
+    }
+
+    /* ====================== INVENTORY (THIẾT BỊ CHƯA GÁN PHÒNG) ====================== */
+
+    /**
+     * Lấy danh sách thiết bị trong inventory (chưa được gán vào phòng nào)
+     * @return List các thiết bị trong inventory
+     */
+    public List<Device> getInventory() {
+        return new ArrayList<>(inventory);
+    }
+
+    /**
+     * Thêm thiết bị vào inventory
+     * @param device Thiết bị cần thêm
+     */
+    public void addToInventory(Device device) {
+        if (device != null) {
+            inventory.add(device);
+        }
+    }
+
+    /**
+     * Xóa thiết bị khỏi inventory theo ID
+     * @param deviceId ID của thiết bị cần xóa
+     * @return true nếu xóa thành công, false nếu không tìm thấy
+     */
+    public boolean removeFromInventory(String deviceId) {
+        if (deviceId == null) return false;
+
+        Iterator<Device> iterator = inventory.iterator();
+        while (iterator.hasNext()) {
+            Device device = iterator.next();
+            if (deviceId.equals(device.getId())) {
+                iterator.remove();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gán thiết bị từ inventory vào một phòng cụ thể
+     * @param deviceId ID thiết bị trong inventory
+     * @param houseId ID nhà
+     * @param roomId ID phòng
+     * @return true nếu gán thành công
+     */
+    public boolean assignInventoryDeviceToRoom(String deviceId, String houseId, String roomId) {
+        if (deviceId == null || houseId == null || roomId == null) return false;
+
+        // Tìm thiết bị trong inventory
+        Device deviceToAssign = null;
+        Iterator<Device> iterator = inventory.iterator();
+        while (iterator.hasNext()) {
+            Device device = iterator.next();
+            if (deviceId.equals(device.getId())) {
+                deviceToAssign = device;
+                iterator.remove(); // Xóa khỏi inventory
+                break;
+            }
+        }
+
+        if (deviceToAssign == null) return false;
+
+        // Thêm vào phòng
+        Room room = getRoomById(houseId, roomId);
+        if (room != null) {
+            deviceToAssign.setRoom(room.getName()); // Cập nhật room name
+            room.getDevices().add(deviceToAssign);
+            return true;
+        }
+
+        // Nếu không tìm thấy phòng, thêm lại vào inventory
+        inventory.add(deviceToAssign);
+        return false;
     }
 }

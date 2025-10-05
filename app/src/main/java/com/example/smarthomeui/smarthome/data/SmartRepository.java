@@ -243,7 +243,7 @@ public class SmartRepository {
         return false;
     }
 
-    // tiện tra houseId theo roomId (dùng cho MainActivity -> RoomDetails)
+    // tiện tra houseId theo roomId (dùng cho MainActivitySR -> RoomDetails)
     public String getHouseIdByRoomId(String roomId) { return roomToHouse.get(roomId); }
 
     /* ====================== DEVICES (trong phòng) ====================== */

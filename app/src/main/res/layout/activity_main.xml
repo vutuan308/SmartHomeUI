@@ -48,12 +48,22 @@
                         app:civ_circle_background_color="@color/white" />
 
                     <TextView
+                        android:id="@+id/tvUserName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Hi, Gopal"
+                        android:text="Hello!"
                         android:textColor="@color/white"
-                        android:textSize="16dp"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvUserEmail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="user@email.com"
+                        android:textColor="@color/white_70"
+                        android:textSize="13sp"
+                        tools:ignore="TextSizeCheck" />
 
                     <TextView
                         android:layout_width="wrap_content"

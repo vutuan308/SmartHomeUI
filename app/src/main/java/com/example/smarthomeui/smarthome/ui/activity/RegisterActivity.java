@@ -135,7 +135,7 @@ public class RegisterActivity extends AppCompatActivity {
         RegisterRequest request = new RegisterRequest(email, password, confirmPassword);
 
         // Call API đăng ký
-        ApiClient.getClient().create(Api.class)
+        ApiClient.getClient(this).create(Api.class)
             .register(request)
             .enqueue(new Callback<RegisterResponse>() {
                 @Override

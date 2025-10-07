@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home/Room card item: dùng chung cho HouseAdapter (hiển thị "x phòng")
-     và RoomAdapter (hiển thị "x thiết bị") -->
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/card_view"
@@ -21,7 +19,7 @@
             android:layout_alignParentBottom="true"
             android:background="@drawable/bg_5" />
 
-        <!-- Nội dung chính: icon + tiêu đề phòng/nhà -->
+        <!-- Nội dung chính: icon + tiêu đề + location -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -46,6 +44,18 @@
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
+            <!-- Subtitle: dùng cho Location của NHÀ (ẩn khi là thẻ Phòng) -->
+            <TextView
+                android:id="@+id/tvSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/textColor"
+                android:textSize="14sp"
+                android:drawablePadding="6dp"
+                android:paddingTop="2dp" />
         </LinearLayout>
 
         <!-- Thanh thông tin + công tắc -->
@@ -66,7 +76,6 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <!-- Dùng MaterialSwitch thay SwitchButton custom -->
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/swMaster"
                 android:layout_width="65dp"
@@ -76,5 +85,4 @@
                 android:checked="false" />
         </RelativeLayout>
     </RelativeLayout>
-
 </androidx.cardview.widget.CardView>

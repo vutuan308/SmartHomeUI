@@ -34,7 +34,26 @@ public interface Api {
     // Xoá nhà
     @DELETE("/api/house/{id}")
     Call<Void> deleteHouse(@Path("id") int id);
-    // GET Nha
+
+    // GET Danh sách phòng
     @GET("/api/room")
     Call<RoomsByHouseWrap> getRoomsGrouped(@Query("skip") int skip, @Query("take") int take);
+
+    // GET Danh sách phòng theo nhà
+    @GET("/api/house/{houseId}/rooms")
+    Call<RoomListWrap> getRoomsByHouseId(@Path("houseId") int houseId,
+                                       @Query("skip") int skip,
+                                       @Query("take") int take);
+
+    // Tạo phòng mới
+    @POST("/api/room")
+    Call<RoomDto> createRoom(@Body CreateRoomReq body);
+
+    // Cập nhật phòng
+    @PUT("/api/room/{id}")
+    Call<RoomDto> updateRoom(@Path("id") int id, @Body UpdateRoomReq body);
+
+    // Xóa phòng
+    @DELETE("/api/room/{id}")
+    Call<Void> deleteRoom(@Path("id") int id);
 }

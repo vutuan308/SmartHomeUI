@@ -13,7 +13,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
     // NHỚ có dấu / cuối
-    private static final String BASE_URL = "https://05f17f08bd1a.ngrok-free.app/";
+    private static final String BASE_URL = "https://039dfec96ea6.ngrok-free.app/";
 
     private static Retrofit authedRetrofit;
     private static Retrofit noAuthRetrofit;
@@ -24,6 +24,8 @@ public class ApiClient {
                         new com.example.smarthomeui.smarthome.network.HouseListWrap.Deserializer())
                 .registerTypeAdapter(com.example.smarthomeui.smarthome.network.RoomsByHouseWrap.class,
                         new com.example.smarthomeui.smarthome.network.RoomsByHouseWrap.Deserializer())
+                .registerTypeAdapter(com.example.smarthomeui.smarthome.network.RoomListWrap.class,
+                        new com.example.smarthomeui.smarthome.network.RoomListWrap.Deserializer())
                 .create();
     }
 

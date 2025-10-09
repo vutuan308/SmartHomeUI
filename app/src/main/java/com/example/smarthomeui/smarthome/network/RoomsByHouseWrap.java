@@ -3,7 +3,9 @@ package com.example.smarthomeui.smarthome.network;
 import com.google.gson.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Gói dữ liệu trả về từ GET /api/room: nhóm phòng theo nhà (dạng .NET có $values) */
 public class RoomsByHouseWrap {
@@ -31,46 +33,135 @@ public class RoomsByHouseWrap {
             if (root.has("skip"))  out.skip  = safeInt(root.get("skip"));
             if (root.has("take"))  out.take  = safeInt(root.get("take"));
 
-            if (root.has("houses") && root.get("houses").isJsonObject()) {
-                JsonObject housesObj = root.getAsJsonObject("houses");
-                if (housesObj.has("$values") && housesObj.get("$values").isJsonArray()) {
-                    for (JsonElement grpEl : housesObj.getAsJsonArray("$values")) {
-                        if (!grpEl.isJsonObject()) continue;
-                        JsonObject grpObj = grpEl.getAsJsonObject();
+            // Map để lưu trữ các đối tượng theo ID tham chiếu
+            Map<String, JsonObject> refMap = new HashMap<>();
+
+            // Xây dựng refMap từ tất cả các đối tượng có $id
+            buildReferenceMap(root, refMap);
+
+            // Xử lý cấu trúc mới: housesWithRooms là một object với key là houseId
+            if (root.has("housesWithRooms") && root.get("housesWithRooms").isJsonObject()) {
+                JsonObject housesObj = root.getAsJsonObject("housesWithRooms");
+
+                // Bỏ qua các trường $id, xử lý các key là houseId
+                for (Map.Entry<String, JsonElement> entry : housesObj.entrySet()) {
+                    String key = entry.getKey();
+                    JsonElement value = entry.getValue();
+
+                    // Bỏ qua các trường không phải số (như $id)
+                    if (!isNumeric(key) || !value.isJsonObject()) continue;
+
+                    int houseId = Integer.parseInt(key);
+                    JsonObject houseRoomsObj = value.getAsJsonObject();
+
+                    if (houseRoomsObj.has("$values") && houseRoomsObj.get("$values").isJsonArray()) {
+                        JsonArray roomsArray = houseRoomsObj.getAsJsonArray("$values");
+
+                        // Nếu không có phòng nào, vẫn tạo header cho nhà
+                        if (roomsArray.size() == 0) {
+                            // Tìm thông tin nhà từ API nhà đã lấy trước đó
+                            continue; // Bỏ qua nhà không có phòng
+                        }
 
                         Group g = new Group();
+                        g.houseId = houseId;
+                        g.rooms = new ArrayList<>();
 
-                        // house info
-                        if (grpObj.has("house") && grpObj.get("house").isJsonObject()) {
-                            JsonObject h = grpObj.getAsJsonObject("house");
-                            g.houseId = h.has("id") && h.get("id").isJsonPrimitive() ? h.get("id").getAsInt() : 0;
-                            g.houseName = h.has("name") && h.get("name").isJsonPrimitive() ? h.get("name").getAsString() : "Nhà";
-                        }
+                        // Khởi tạo thông tin nhà mặc định
+                        g.houseName = "Nhà";
+                        g.houseLocation = "Địa chỉ";
 
-                        // rooms list
-                        if (grpObj.has("rooms") && grpObj.get("rooms").isJsonObject()) {
-                            JsonObject roomsObj = grpObj.getAsJsonObject("rooms");
-                            if (roomsObj.has("$values") && roomsObj.get("$values").isJsonArray()) {
-                                for (JsonElement rEl : roomsObj.getAsJsonArray("$values")) {
-                                    if (!rEl.isJsonObject()) continue;
-                                    JsonObject r = rEl.getAsJsonObject();
-                                    RoomDto dto = new RoomDto();
-                                    dto.id   = r.has("id")   && r.get("id").isJsonPrimitive()   ? r.get("id").getAsInt()   : 0;
-                                    dto.name = r.has("name") && r.get("name").isJsonPrimitive() ? r.get("name").getAsString() : "Phòng";
-                                    if (r.has("type") && r.get("type").isJsonPrimitive()) dto.type = r.get("type").getAsString();
-                                    if (r.has("iconKey") && r.get("iconKey").isJsonPrimitive()) dto.iconKey = r.get("iconKey").getAsString();
-                                    if (r.has("description") && r.get("description").isJsonPrimitive()) dto.description = r.get("description").getAsString();
-                                    if (r.has("deviceCount") && r.get("deviceCount").isJsonPrimitive()) dto.deviceCount = r.get("deviceCount").getAsInt();
-                                    g.rooms.add(dto);
+                        // Tìm thông tin nhà từ API hoặc trong JSON
+                        boolean houseInfoFound = false;
+
+                        for (JsonElement roomEl : roomsArray) {
+                            JsonObject roomObj = null;
+
+                            // Xử lý trường hợp đối tượng là tham chiếu ($ref)
+                            if (roomEl.isJsonObject() && roomEl.getAsJsonObject().has("$ref")) {
+                                String refId = roomEl.getAsJsonObject().get("$ref").getAsString();
+                                if (refMap.containsKey(refId)) {
+                                    roomObj = refMap.get(refId);
+                                }
+                            } else if (roomEl.isJsonObject()) {
+                                roomObj = roomEl.getAsJsonObject();
+                            }
+
+                            if (roomObj == null) continue;
+
+                            // Lấy thông tin phòng
+                            RoomDto dto = new RoomDto();
+                            dto.id = roomObj.has("id") ? roomObj.get("id").getAsInt() : 0;
+                            dto.name = roomObj.has("name") ? roomObj.get("name").getAsString() : "Phòng";
+                            dto.detail = roomObj.has("detail") ? roomObj.get("detail").getAsString() : null;
+
+                            dto.deviceCount = 0; // Mặc định
+
+                            if (roomObj.has("devices") && roomObj.get("devices").isJsonObject()) {
+                                JsonObject devicesObj = roomObj.getAsJsonObject("devices");
+                                if (devicesObj.has("$values") && devicesObj.get("$values").isJsonArray()) {
+                                    dto.deviceCount = devicesObj.getAsJsonArray("$values").size();
                                 }
                             }
+
+                            // Lấy thông tin nhà từ phòng đầu tiên
+                            if (!houseInfoFound && roomObj.has("house") && roomObj.get("house").isJsonObject()) {
+                                JsonObject houseObj = roomObj.getAsJsonObject("house");
+                                if (houseObj.has("name") && !houseObj.get("name").isJsonNull()) {
+                                    g.houseName = houseObj.get("name").getAsString();
+                                }
+                                if (houseObj.has("location") && !houseObj.get("location").isJsonNull()) {
+                                    g.houseLocation = houseObj.get("location").getAsString();
+                                }
+                                houseInfoFound = true;
+                            }
+
+                            g.rooms.add(dto);
                         }
 
-                        out.groups.add(g);
+                        if (g.rooms.size() > 0) {
+                            out.groups.add(g);
+                        }
                     }
                 }
             }
+
             return out;
+        }
+
+        // Hàm đệ quy để xây dựng map các object có $id
+        private void buildReferenceMap(JsonElement element, Map<String, JsonObject> refMap) {
+            if (element == null) return;
+
+            if (element.isJsonObject()) {
+                JsonObject obj = element.getAsJsonObject();
+
+                // Nếu đối tượng có $id, thêm vào map
+                if (obj.has("$id")) {
+                    String id = obj.get("$id").getAsString();
+                    refMap.put(id, obj);
+                }
+
+                // Đệ quy với tất cả các thuộc tính
+                for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                    buildReferenceMap(entry.getValue(), refMap);
+                }
+            }
+            else if (element.isJsonArray()) {
+                // Đệ quy với tất cả các phần tử trong mảng
+                for (JsonElement item : element.getAsJsonArray()) {
+                    buildReferenceMap(item, refMap);
+                }
+            }
+        }
+
+        private boolean isNumeric(String str) {
+            try {
+                Integer.parseInt(str);
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
         }
 
         private static Integer safeInt(JsonElement e) {

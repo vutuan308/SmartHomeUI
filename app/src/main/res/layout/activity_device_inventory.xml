@@ -140,7 +140,7 @@
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:src="@drawable/ic_plus"
-                android:tint="@android:color/white"
+                app:tint="@android:color/white"
                 android:contentDescription="@string/app_name"
                 android:clickable="true"
                 android:focusable="true" />

@@ -14,4 +14,27 @@
     <string name="demo_title">Lorem Ipsum</string>
     <string name="next">Next</string>
     <string name="finish">Finish</string>
+
+    <string name="title_connect_device">Connect to Device</string>
+    <string name="title_connect_wifi">Connect to Wi‑Fi</string>
+    <string name="connect_your_device">Connect your device</string>
+    <string name="connect_device_desc">To provision your device: make sure it is turned ON. Connect your mobile phone to the Wi‑Fi network with a name like PROV_XXXXXX</string>
+    <string name="scan">Scan</string>
+    <string name="connect">Connect</string>
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="scanning">Scanning…</string>
+    <string name="scan_start_failed">Unable to start scan</string>
+    <string name="scan_completed">Scan completed</string>
+    <string name="scan_failed">Scan failed: %1$s</string>
+    <string name="missing_ble_permission">Missing Bluetooth permission</string>
+    <string name="connected">Connected</string>
+    <string name="connect_failed">Connect failed: %1$s</string>
+    <string name="no_device_in_session">No ESP device found. Please connect via BLE first.</string>
+    <string name="wifi_scanning">Scanning Wi‑Fi networks…</string>
+    <string name="wifi_scan_failed">Wi‑Fi scan failed: %1$s</string>
+    <string name="wifi_select_or_manual">Select a network below or enter SSID manually</string>
+    <string name="manual_entry">Manual SSID / password…</string>
+    <string name="provision_success">Provisioning successful</string>
+    <string name="provision_failed">Provisioning failed: %1$s</string>
 </resources>

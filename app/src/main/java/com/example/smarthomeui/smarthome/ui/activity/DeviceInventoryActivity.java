@@ -50,6 +50,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
     private DeviceInventoryAdapter adapter;
 
     private static final int REQ_PERMS = 1001;
+    private static final int REQ_BLE_SCAN = 1002;
 
     private static final String ESP_BLE_PRIMARY_SERVICE_UUID = "0000ffff-0000-1000-8000-00805f9b34fb";
     @Nullable private ESPDevice currentEspDevice;
@@ -120,6 +121,20 @@ public class DeviceInventoryActivity extends AppCompatActivity {
 
         findViewById(R.id.fabAddInventory).setOnClickListener(v -> openAddToInventoryDialog());
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh inventory khi quay lại từ BLE scan flow
+        refreshInventory();
+    }
+
+    private void refreshInventory() {
+        inventory.clear();
+        inventory.addAll(SmartRepository.get(this).getInventory());
+        adapter.notifyDataSetChanged();
+    }
+
     private void openAddToInventoryDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.ThemeOverlay_Material3_Dialog);
         builder.setTitle("Thêm thiết bị ESP");
@@ -129,7 +144,8 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         builder.setItems(options, (dialog, which) -> {
             switch (which) {
                 case 0:
-                    startBluetoothScan();
+                    // Gọi BLEScanActivity thay vì quét trực tiếp
+                    startActivity(new Intent(this, BLEScanActivity.class));
                     break;
                 case 1:
                     openManualAddDialog();

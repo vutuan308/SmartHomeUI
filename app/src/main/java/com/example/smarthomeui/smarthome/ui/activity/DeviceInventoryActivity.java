@@ -49,13 +49,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
     private final List<Device> inventory = new ArrayList<>();
     private DeviceInventoryAdapter adapter;
 
-    // Enum nội bộ để thay thế cho TransportType và SecurityType
-    private enum DeviceTransportType {
-        BLE, SOFTAP
-    }
-
     private static final int REQ_PERMS = 1001;
-    @Nullable private DeviceTransportType pendingTransportType;
 
     private static final String ESP_BLE_PRIMARY_SERVICE_UUID = "0000ffff-0000-1000-8000-00805f9b34fb";
     @Nullable private ESPDevice currentEspDevice;
@@ -130,19 +124,14 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.ThemeOverlay_Material3_Dialog);
         builder.setTitle("Thêm thiết bị ESP");
 
-        String[] options = {"Quét thiết bị BLE", "Quét thiết bị WiFi (SoftAP)", "Thêm thủ công"};
+        String[] options = {"Quét thiết bị Bluetooth", "Thêm thủ công"};
 
         builder.setItems(options, (dialog, which) -> {
             switch (which) {
                 case 0:
-                    // Open full-screen BLE scan UI
-                    startActivity(new Intent(this, BLEScanActivity.class));
+                    startBluetoothScan();
                     break;
                 case 1:
-                    // Open WiFi provision activity directly (has built-in WiFi scanning)
-                    startActivity(new Intent(this, WiFiProvisionActivity.class));
-                    break;
-                case 2:
                     openManualAddDialog();
                     break;
             }
@@ -152,160 +141,47 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private void startSoftApProvisionFlow() {
-        try {
-            if (!checkPermissions()) {
-                pendingTransportType = DeviceTransportType.SOFTAP;
-                requestPermissions(DeviceTransportType.SOFTAP);
-                return;
-            }
-
-            Toast.makeText(this, "Đang tìm thiết bị SoftAP...", Toast.LENGTH_SHORT).show();
-
-            ESPProvisionManager pm = ESPProvisionManager.getInstance(this);
-
-            // Tìm kiếm các thiết bị WiFi ESP trước
-            pm.searchWiFiEspDevices("", new WiFiScanListener() {
-                @Override
-                public void onWifiListReceived(ArrayList<WiFiAccessPoint> wifiList) {
-                    runOnUiThread(() -> {
-                        if (wifiList == null || wifiList.isEmpty()) {
-                            Toast.makeText(DeviceInventoryActivity.this, "Không tìm thấy thiết bị ESP SoftAP", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        showSoftApDevicesList(wifiList);
-                    });
-                }
-
-                @Override
-                public void onWiFiScanFailed(Exception e) {
-                    runOnUiThread(() -> {
-                        Toast.makeText(DeviceInventoryActivity.this, "Quét SoftAP thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    });
-                }
-            });
-
-        } catch (Exception e) {
-            Toast.makeText(this, "Không thể bắt đầu SoftAP: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void showSoftApDevicesList(ArrayList<WiFiAccessPoint> wifiList) {
-        String[] deviceNames = new String[wifiList.size()];
-        for (int i = 0; i < wifiList.size(); i++) {
-            try {
-                deviceNames[i] = wifiList.get(i).getWifiName();
-            } catch (Exception e) {
-                deviceNames[i] = "ESP Device " + i;
-            }
-        }
-
-        new AlertDialog.Builder(this)
-                .setTitle("Chọn thiết bị ESP SoftAP")
-                .setItems(deviceNames, (dialog, which) -> {
-                    connectToSoftApDevice(deviceNames[which]);
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
-
-    private void connectToSoftApDevice(String deviceName) {
-        try {
-            Toast.makeText(this, "Đang kết nối đến " + deviceName + "...", Toast.LENGTH_SHORT).show();
-
-            ESPProvisionManager pm = ESPProvisionManager.getInstance(this);
-            ESPDevice esp = pm.createESPDevice(ESPConstants.TransportType.TRANSPORT_SOFTAP,
-                                               ESPConstants.SecurityType.SECURITY_2);
-
-            // Set proof of possession
-            try {
-                esp.setProofOfPossession("abcd1234");
-            } catch (Exception ignored) {}
-
-            // Kết nối đến thiết bị
-            try {
-                esp.connectToDevice();
-            } catch (SecurityException se) {
-                Toast.makeText(this, "Thiếu quyền mạng để kết nối SoftAP: " + se.getMessage(), Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Lưu ESP device vào session và chuyển đến WiFi provision
-            ProvisionSession.get().setEspDevice(esp);
-
-            // Mở WiFi provisioning activity
-            WiFiProvisionActivity.start(this);
-
-        } catch (Exception e) {
-            Toast.makeText(this, "Kết nối SoftAP thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            Log.e("ESP_SOFTAP", "connectToSoftApDevice error", e);
-        }
-    }
-
-    private void startESPDeviceScan(DeviceTransportType transportType) {
+    private void startBluetoothScan() {
         if (!checkPermissions()) {
-            pendingTransportType = transportType;
-            requestPermissions(transportType);
+            requestPermissions();
             return;
         }
 
         try {
             ESPProvisionManager provisionManager = ESPProvisionManager.getInstance(this);
+            Toast.makeText(this, "Đang quét thiết bị Bluetooth...", Toast.LENGTH_SHORT).show();
 
-            if (transportType == DeviceTransportType.BLE) {
-                Toast.makeText(this, "Đang quét thiết bị BLE...", Toast.LENGTH_SHORT).show();
+            // Show BLE devices picker dialog
+            runOnUiThread(() -> showBleDevicesPicker());
 
-                // Prepare and show a single picker dialog that updates as devices are found
-                runOnUiThread(() -> showBleDevicesPicker());
+            try {
+                provisionManager.searchBleEspDevices("", new BleScanListener() {
+                    @Override
+                    public void scanStartFailed() {
+                        runOnUiThread(() -> Toast.makeText(DeviceInventoryActivity.this,
+                                "Không thể bắt đầu quét Bluetooth", Toast.LENGTH_SHORT).show());
+                    }
 
-                try {
-                    provisionManager.searchBleEspDevices("", new BleScanListener() {
-                        @Override
-                        public void scanStartFailed() {
-                            runOnUiThread(() -> Toast.makeText(DeviceInventoryActivity.this,
-                                    "Không thể bắt đầu quét BLE", Toast.LENGTH_SHORT).show());
-                        }
+                    @Override
+                    public void onPeripheralFound(BluetoothDevice device, ScanResult scanResult) {
+                        runOnUiThread(() -> addBleDeviceToList(device));
+                    }
 
-                        @Override
-                        public void onPeripheralFound(BluetoothDevice device, ScanResult scanResult) {
-                            runOnUiThread(() -> addBleDeviceToList(device));
-                        }
+                    @Override
+                    public void scanCompleted() {
+                        runOnUiThread(() -> Toast.makeText(DeviceInventoryActivity.this,
+                                "Quét Bluetooth hoàn tất", Toast.LENGTH_SHORT).show());
+                    }
 
-                        @Override
-                        public void scanCompleted() {
-                            runOnUiThread(() -> Toast.makeText(DeviceInventoryActivity.this,
-                                    "Quét BLE hoàn tất", Toast.LENGTH_SHORT).show());
-                        }
-
-                        @Override
-                        public void onFailure(Exception e) {
-                            runOnUiThread(() -> Toast.makeText(DeviceInventoryActivity.this,
-                                    "Lỗi quét BLE: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-                        }
-                    });
-                } catch (SecurityException se) {
-                    Toast.makeText(this, "Thiếu quyền BLE (SCAN)", Toast.LENGTH_SHORT).show();
-                    pendingTransportType = transportType;
-                    requestPermissions(transportType);
-                }
-            } else {
-                Toast.makeText(this, "Đang quét thiết bị WiFi (SoftAP)...", Toast.LENGTH_SHORT).show();
-                try {
-                    provisionManager.searchWiFiEspDevices("", new WiFiScanListener() {
-                        @Override
-                        public void onWifiListReceived(ArrayList<WiFiAccessPoint> wifiList) {
-                            runOnUiThread(() -> showWiFiDevicesList(wifiList, transportType));
-                        }
-
-                        @Override
-                        public void onWiFiScanFailed(Exception e) {
-                            runOnUiThread(() -> Toast.makeText(DeviceInventoryActivity.this,
-                                    "Lỗi quét SoftAP: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-                        }
-                    });
-                } catch (SecurityException se) {
-                    Toast.makeText(this, "Thiếu quyền WiFi", Toast.LENGTH_SHORT).show();
-                }
+                    @Override
+                    public void onFailure(Exception e) {
+                        runOnUiThread(() -> Toast.makeText(DeviceInventoryActivity.this,
+                                "Lỗi quét Bluetooth: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                    }
+                });
+            } catch (SecurityException se) {
+                Toast.makeText(this, "Thiếu quyền Bluetooth", Toast.LENGTH_SHORT).show();
+                requestPermissions();
             }
         } catch (Exception e) {
             Toast.makeText(this, "Lỗi khởi tạo ESP Manager: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -321,12 +197,12 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         bleListAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, names);
 
         AlertDialog.Builder b = new AlertDialog.Builder(this)
-                .setTitle("Chọn thiết bị BLE")
+                .setTitle("Chọn thiết bị Bluetooth")
                 .setAdapter(bleListAdapter, (d, which) -> {
                     if (which >= 0 && which < bleDevices.size()) {
                         BluetoothDevice sel = bleDevices.get(which);
                         d.dismiss();
-                        connectBleToDevice(sel);
+                        connectToBluetoothDevice(sel);
                     }
                 })
                 .setNegativeButton("Đóng", (d, w) -> d.dismiss());
@@ -373,36 +249,50 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Thiết bị BLE tìm thấy")
                 .setMessage("Tên: " + name + "\nĐịa chỉ: " + device.getAddress())
-                .setPositiveButton("Kết nối", (d, w) -> connectBleToDevice(device))
+                .setPositiveButton("Kết nối", (d, w) -> connectToBluetoothDevice(device))
                 .setNegativeButton("Hủy", null)
                 .show();
     }
 
-    private void connectBleToDevice(BluetoothDevice device) {
+    private void connectToBluetoothDevice(BluetoothDevice device) {
         try {
             if (!checkPermissions()) {
-                pendingTransportType = DeviceTransportType.BLE;
-                requestPermissions(DeviceTransportType.BLE);
+                requestPermissions();
                 return;
             }
+
+            Toast.makeText(this, "Đang kết nối đến " + getDeviceDisplayName(device) + "...", Toast.LENGTH_SHORT).show();
+
             ESPProvisionManager pm = ESPProvisionManager.getInstance(this);
             ESPDevice esp = pm.createESPDevice(ESPConstants.TransportType.TRANSPORT_BLE,
                                                ESPConstants.SecurityType.SECURITY_2);
             currentEspDevice = esp;
-            try { esp.setProofOfPossession("abcd1234"); } catch (Exception ignored) {}
+
+            try {
+                esp.setProofOfPossession("abcd1234");
+            } catch (Exception ignored) {}
+
             esp.connectBLEDevice(device, ESP_BLE_PRIMARY_SERVICE_UUID);
+
             // Dismiss the list dialog if showing
             if (bleListDialog != null && bleListDialog.isShowing()) {
                 bleListDialog.dismiss();
             }
-            showWifiScanAndProvision();
+
+            // Save ESP device to session and navigate to WiFiProvisionActivity
+            ProvisionSession.get().setEspDevice(esp);
+
+            Toast.makeText(this, "Kết nối Bluetooth thành công! Chuyển đến cấu hình WiFi...", Toast.LENGTH_SHORT).show();
+
+            // Start WiFiProvisionActivity for WiFi scanning and provisioning
+            WiFiProvisionActivity.start(this);
+
         } catch (SecurityException se) {
-            Toast.makeText(this, "Thiếu quyền BLE", Toast.LENGTH_SHORT).show();
-            pendingTransportType = DeviceTransportType.BLE;
-            requestPermissions(DeviceTransportType.BLE);
+            Toast.makeText(this, "Thiếu quyền Bluetooth", Toast.LENGTH_SHORT).show();
+            requestPermissions();
         } catch (Exception e) {
-            Toast.makeText(this, "Kết nối BLE thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            Log.e("ESP_BLE", "connectBleToDevice error", e);
+            Toast.makeText(this, "Kết nối Bluetooth thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e("ESP_BLE", "connectToBluetoothDevice error", e);
         }
     }
 
@@ -539,43 +429,6 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         }
     }
 
-    // Sửa lại connectToESPDevice cho SoftAP: sau khi kết nối, cũng chuyển sang quét WiFi
-    private void connectToESPDevice(String deviceName, String deviceAddress, DeviceTransportType transportType) {
-        try {
-            Toast.makeText(this, "Đang kết nối đến " + deviceName + "...", Toast.LENGTH_SHORT).show();
-            if (!checkPermissions()) {
-                pendingTransportType = transportType;
-                requestPermissions(transportType);
-                return;
-            }
-            ESPProvisionManager pm = ESPProvisionManager.getInstance(this);
-            ESPConstants.TransportType tt = (transportType == DeviceTransportType.BLE)
-                    ? ESPConstants.TransportType.TRANSPORT_BLE
-                    : ESPConstants.TransportType.TRANSPORT_SOFTAP;
-            ESPDevice esp = pm.createESPDevice(tt, ESPConstants.SecurityType.SECURITY_2);
-            currentEspDevice = esp;
-            try { esp.setProofOfPossession("abcd1234"); } catch (Exception ignored) {}
-            if (transportType == DeviceTransportType.BLE) {
-                // Flow BLE dùng connectBleToDevice thay thế
-                Toast.makeText(this, "Vui lòng chọn từ danh sách BLE để kết nối", Toast.LENGTH_SHORT).show();
-                return;
-            } else {
-                // SoftAP: thư viện sẽ tự kết nối tới SSID thiết bị thông qua connectToDevice()
-                try {
-                    esp.connectToDevice();
-                } catch (SecurityException se) {
-                    Toast.makeText(this, "Thiếu quyền mạng để kết nối SoftAP", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                // Sau khi kết nối thành công, quét WiFi và provisioning
-                showWifiScanAndProvision();
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "Kết nối thiết bị thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            Log.e("ESP_CONNECT", "connectToESPDevice error", e);
-        }
-    }
-
     private void openManualAddDialog() {
         // Giữ lại dialog thêm thủ công cũ cho trường hợp cần thiết
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_device_global, null, false);
@@ -632,29 +485,6 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void showWiFiDevicesList(ArrayList<WiFiAccessPoint> wifiList, DeviceTransportType transportType) {
-        if (wifiList == null || wifiList.isEmpty()) {
-            Toast.makeText(this, "Không tìm thấy SoftAP của ESP", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String[] ssids = new String[wifiList.size()];
-        for (int i = 0; i < wifiList.size(); i++) {
-            try {
-                ssids[i] = wifiList.get(i).getWifiName();
-            } catch (Exception ignore) {
-                ssids[i] = String.valueOf(wifiList.get(i));
-            }
-        }
-
-        new AlertDialog.Builder(this)
-                .setTitle("Chọn SoftAP của ESP")
-                .setItems(ssids, (dialog, which) -> {
-                    String ssid = ssids[which];
-                    connectToESPDevice(ssid, ssid, transportType);
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
 
     private boolean checkPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -669,7 +499,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         return ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED;
     }
 
-    private void requestPermissions(DeviceTransportType transportType) {
+    private void requestPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ActivityCompat.requestPermissions(this, new String[] {
                 Manifest.permission.BLUETOOTH_SCAN,
@@ -682,23 +512,20 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         }
     }
 
-    private void requestPermissions() {
-        requestPermissions(DeviceTransportType.BLE);
-    }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_PERMS) {
             boolean allGranted = true;
             for (int r : grantResults) {
-                if (r != PackageManager.PERMISSION_GRANTED) { allGranted = false; break; }
+                if (r != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
             }
-            if (allGranted && pendingTransportType != null) {
-                DeviceTransportType tmp = pendingTransportType;
-                pendingTransportType = null;
-                startESPDeviceScan(tmp);
-            } else if (!allGranted) {
+            if (allGranted) {
+                startBluetoothScan();
+            } else {
                 Toast.makeText(this, "Cần cấp quyền để quét/kết nối thiết bị ESP", Toast.LENGTH_SHORT).show();
             }
         }

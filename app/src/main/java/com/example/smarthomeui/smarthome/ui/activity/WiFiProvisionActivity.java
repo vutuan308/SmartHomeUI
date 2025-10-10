@@ -66,101 +66,48 @@ public class WiFiProvisionActivity extends AppCompatActivity {
             }
         });
 
-        // Nếu đã có thiết bị trong session -> quét mạng ngay, ngược lại -> tìm và kết nối SoftAP của ESP
-        if (ProvisionSession.get().getEspDevice() != null) {
+        // Kiểm tra xem có ESP device từ Bluetooth không
+        ESPDevice device = ProvisionSession.get().getEspDevice();
+        if (device != null) {
+            Toast.makeText(this, "Thiết bị ESP đã kết nối qua Bluetooth. Đang quét WiFi...", Toast.LENGTH_SHORT).show();
             scan();
         } else {
-            discoverAndConnectSoftAp();
-        }
-    }
-
-    private void discoverAndConnectSoftAp() {
-        adapter.clear();
-        adapter.add(getString(R.string.wifi_scanning));
-        try {
-            ESPProvisionManager pm = ESPProvisionManager.getInstance(this);
-            pm.searchWiFiEspDevices("", new WiFiScanListener() {
-                @Override public void onWifiListReceived(ArrayList<WiFiAccessPoint> wifiList) {
-                    runOnUiThread(() -> {
-                        if (wifiList == null || wifiList.isEmpty()) {
-                            adapter.clear();
-                            adapter.add(getString(R.string.wifi_scan_failed, getString(R.string.no_device_in_session)));
-                            Toast.makeText(WiFiProvisionActivity.this, "Không tìm thấy ESP SoftAP", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        showSoftApPicker(wifiList);
-                    });
-                }
-                @Override public void onWiFiScanFailed(Exception e) {
-                    runOnUiThread(() -> Toast.makeText(WiFiProvisionActivity.this, "Quét SoftAP thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show());
-                }
-            });
-        } catch (SecurityException se) {
-            Toast.makeText(this, "Thiếu quyền để tìm SoftAP: " + se.getMessage(), Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
-            Toast.makeText(this, "Lỗi khi tìm SoftAP: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void showSoftApPicker(ArrayList<WiFiAccessPoint> wifiList) {
-        List<String> names = new ArrayList<>();
-        for (WiFiAccessPoint ap : wifiList) {
-            try { names.add(ap.getWifiName()); } catch (Exception e) { names.add(String.valueOf(ap)); }
-        }
-        String[] items = names.toArray(new String[0]);
-        new AlertDialog.Builder(this)
-                .setTitle("Chọn thiết bị ESP (SoftAP)")
-                .setItems(items, (d, which) -> connectSoftAp(items[which]))
-                .setNegativeButton(R.string.cancel, null)
-                .show();
-    }
-
-    private void connectSoftAp(String deviceSsid) {
-        try {
-            ESPProvisionManager pm = ESPProvisionManager.getInstance(this);
-            ESPDevice dev = pm.createESPDevice(ESPConstants.TransportType.TRANSPORT_SOFTAP,
-                                               ESPConstants.SecurityType.SECURITY_2);
-            // Set PoP nếu có
-            try {
-                String pop = ProvisionSession.get().getPop();
-                if (pop != null && !pop.isEmpty()) dev.setProofOfPossession(pop);
-            } catch (Exception ignored) {}
-
-            // Kết nối tới SoftAP
-            dev.connectToDevice();
-            // Lưu vào session
-            ProvisionSession.get().setEspDevice(dev);
-            Toast.makeText(this, "Đã kết nối thiết bị. Đang quét WiFi...", Toast.LENGTH_SHORT).show();
-            // Quét WiFi quanh thiết bị ESP
-            scan();
-        } catch (SecurityException se) {
-            Toast.makeText(this, "Thiếu quyền mạng để kết nối SoftAP: " + se.getMessage(), Toast.LENGTH_SHORT).show();
-        } catch (Exception e) {
-            Toast.makeText(this, "Kết nối SoftAP thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Không có thiết bị ESP trong session. Vui lòng quay lại và kết nối Bluetooth trước.", Toast.LENGTH_LONG).show();
+            finish();
         }
     }
 
     private void scan() {
         ESPDevice dev = ProvisionSession.get().getEspDevice();
         if (dev == null) {
-            // Nếu chưa có thiết bị, tự tìm và kết nối SoftAP trước, rồi mới quét WiFi
-            discoverAndConnectSoftAp();
+            Toast.makeText(this, "Không có thiết bị ESP trong session", Toast.LENGTH_SHORT).show();
             return;
         }
+
         adapter.clear();
-        adapter.add(getString(R.string.wifi_scanning));
+        adapter.add("Đang quét mạng WiFi...");
         aps.clear();
+
         try {
             dev.scanNetworks(new WiFiScanListener() {
-                @Override public void onWifiListReceived(ArrayList<WiFiAccessPoint> wifiList) {
+                @Override
+                public void onWifiListReceived(ArrayList<WiFiAccessPoint> wifiList) {
                     runOnUiThread(() -> updateList(wifiList));
                 }
-                @Override public void onWiFiScanFailed(Exception e) {
-                    runOnUiThread(() -> Toast.makeText(WiFiProvisionActivity.this, getString(R.string.wifi_scan_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
+
+                @Override
+                public void onWiFiScanFailed(Exception e) {
+                    runOnUiThread(() -> {
+                        adapter.clear();
+                        adapter.add("Quét WiFi thất bại: " + e.getMessage());
+                        Toast.makeText(WiFiProvisionActivity.this, "Quét WiFi thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
                 }
             });
         } catch (SecurityException se) {
-            Toast.makeText(this, getString(R.string.wifi_scan_failed, se.getMessage()), Toast.LENGTH_SHORT).show();
+            adapter.clear();
+            adapter.add("Thiếu quyền để quét WiFi");
+            Toast.makeText(this, "Thiếu quyền để quét WiFi: " + se.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 

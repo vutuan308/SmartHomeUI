@@ -120,7 +120,8 @@ public class HouseListActivity extends BaseActivity {
                     i.putExtra("house_id", house.getId());
                     startActivity(i);
                 },
-                (house, position) -> showHouseActionsDialog(house, position)  // <-- thay ở đây
+                (house, position) -> showHouseActionsDialog(house, position),  // long click
+                (house, position) -> showHouseActionsDialog(house, position)   // menu click
         );
 
 
@@ -300,8 +301,6 @@ public class HouseListActivity extends BaseActivity {
     }
 
     private House mapToUiHouse(HouseDto dto) {
-        // Model UI House của bạn: (id:String, name:String, iconRes:int) — điều chỉnh theo constructor bạn đang dùng
-        // Vì id backend là int -> ép sang String để dùng lại adapter/model cũ
         House h = new House(String.valueOf(dto.id),
                 safe(dto.name, "Nhà"),
                 R.drawable.home);
@@ -324,3 +323,5 @@ public class HouseListActivity extends BaseActivity {
 
     private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }
 }
+
+

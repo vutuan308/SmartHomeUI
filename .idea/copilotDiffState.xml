@@ -12,6 +12,15 @@
             </PendingDiffInfo>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/app/src/main/res/drawable/edit_text_background.xml">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/app/src/main/res/drawable/edit_text_background.xml" />
+              <option name="originalContent" value="&#10;&#10;" />
+              <option name="updatedContent" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;&#10;&lt;shape xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;&#10;    android:shape=&quot;rectangle&quot;&gt;&#10;    &lt;solid android:color=&quot;#FFFFFF&quot; /&gt;&#10;    &lt;corners android:radius=&quot;8dp&quot; /&gt;&#10;    &lt;stroke&#10;        android:width=&quot;1dp&quot;&#10;        android:color=&quot;#CCCCCC&quot; /&gt;&#10;    &lt;padding&#10;        android:bottom=&quot;8dp&quot;&#10;        android:left=&quot;12dp&quot;&#10;        android:right=&quot;12dp&quot;&#10;        android:top=&quot;8dp&quot; /&gt;&#10;&lt;/shape&gt;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

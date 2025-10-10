@@ -1,10 +1,15 @@
 package com.example.smarthomeui.smarthome.network;
 
+import java.util.List;
+
 public class RoomDto {
     public int id;
     public String name;
-    public String type;       // có thể null
-    public String iconKey;    // có thể null
-    public String description;// có thể null
+    public String detail;
+    public String type;
+    public String iconKey;
+    public int houseID;
     public Integer deviceCount;
+
+    // Constructors và các phương thức khác có thể được thêm vào nếu cần
 }

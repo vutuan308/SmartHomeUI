@@ -1,5 +1,6 @@
 package com.example.smarthomeui.smarthome.ui.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -176,8 +177,9 @@ public class WiFiProvisionActivity extends AppCompatActivity {
                 }
                 @Override public void deviceProvisioningSuccess() {
                     runOnUiThread(() -> {
-                        Toast.makeText(WiFiProvisionActivity.this, R.string.provision_success, Toast.LENGTH_LONG).show();
-                        // Add to inventory similarly
+                        Toast.makeText(WiFiProvisionActivity.this, "Provisioning thành công!", Toast.LENGTH_LONG).show();
+
+                        // Add to inventory
                         String name = "ESP Device";
                         Device newDevice = new Device(UUID.randomUUID().toString(), name, "ESP Device", false);
                         newDevice.setToken(ssid);
@@ -185,7 +187,13 @@ public class WiFiProvisionActivity extends AppCompatActivity {
                         newDevice.setBrightness(100);
                         newDevice.setColor(0xFFFFFFFF);
                         SmartRepository.get(WiFiProvisionActivity.this).addToInventory(newDevice);
+
                         if (dismissOnSuccess != null) dismissOnSuccess.dismiss();
+
+                        // Quay về DeviceInventoryActivity thay vì finish()
+                        Intent intent = new Intent(WiFiProvisionActivity.this, DeviceInventoryActivity.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
                         finish();
                     });
                 }

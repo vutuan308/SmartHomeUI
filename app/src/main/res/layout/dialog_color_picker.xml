@@ -27,10 +27,12 @@
     <!-- HEX (tuỳ chọn) -->
     <EditText
         android:id="@+id/etHex"
-        android:layout_width="match_parent" android:layout_height="40dp"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
         android:layout_marginTop="10dp"
-        android:hint="#RRGGBB" android:inputType="textNoSuggestions"
-        android:text="#684cc1"/>
+        android:hint="#RRGGBB"
+        android:inputType="textNoSuggestions"
+        android:text="#684cc1" />
 
     <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"

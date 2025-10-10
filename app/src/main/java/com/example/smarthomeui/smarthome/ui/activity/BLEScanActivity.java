@@ -358,11 +358,15 @@ public class BLEScanActivity extends AppCompatActivity {
                 esp.setProofOfPossession(pop);
             } catch (Exception ignored) {}
 
+            // Kết nối BLE và đợi callback
             esp.connectBLEDevice(device, PRIMARY_SERVICE_UUID);
-            ProvisionSession.get().setEspDevice(esp);
 
-            showSafeToast("Đã kết nối thành công với " + getSafeName(device), Toast.LENGTH_SHORT);
-            WiFiProvisionActivity.start(this);
+            // Đợi một chút để kết nối ổn định trước khi chuyển activity
+            new android.os.Handler().postDelayed(() -> {
+                ProvisionSession.get().setEspDevice(esp);
+                showSafeToast("Đã kết nối thành công với " + getSafeName(device), Toast.LENGTH_SHORT);
+                WiFiProvisionActivity.start(this);
+            }, 2000); // Đợi 2 giây để kết nối ổn định
 
         } catch (SecurityException se) {
             Log.e(TAG, "SecurityException khi kết nối: " + se.getMessage(), se);

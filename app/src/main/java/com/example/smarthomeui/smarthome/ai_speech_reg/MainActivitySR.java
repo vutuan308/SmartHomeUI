@@ -105,13 +105,27 @@ public class MainActivitySR extends AppCompatActivity {
 
     private void emitParse(String text) {
         DeviceModels.ParseResult r = parser.parse(text);
+        tvHeard.setText(text); // phần trên: "Người dùng nói"
 
-        // Lấy top-N ứng viên (ví dụ 5)
-        List<DeviceRegistry.CandidateResult> cands =
-                registry.rankCandidates(text, r.room, 5);
+        // Trường hợp hoàn toàn không liên quan hoặc không nghe được
+        boolean unrelated = !r.isDeviceKnown() && !r.isActionKnown() && !r.isValueKnown() && !r.isRoomKnown();
+        if (unrelated) {
+            tvResult.setText("Không biết hoặc không thể nghe. Vui lòng nói lại rõ hơn.");
+            return;
+        }
+
+        // Không tìm thấy thiết bị phù hợp (không mở sheet)
+        if (!r.isDeviceKnown()) {
+            tvResult.setText("Không biết hoặc không tìm thấy thiết bị phù hợp.");
+            return;
+        }
+
+        // Có thiết bị → mở sheet xác nhận như trước
+        List<DeviceRegistry.CandidateResult> cands = registry.rankCandidates(text,
+                r.isRoomKnown() ? r.room : null, 5);
 
         if (cands.isEmpty()) {
-            tvResult.setText("Không tìm thấy thiết bị phù hợp. Hãy nói rõ tên/ phòng.");
+            tvResult.setText("Không biết hoặc không tìm thấy thiết bị phù hợp.");
             return;
         }
 

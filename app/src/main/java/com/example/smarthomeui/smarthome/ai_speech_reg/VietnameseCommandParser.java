@@ -8,7 +8,7 @@ import static com.example.smarthomeui.smarthome.ai_speech_reg.StringUtilsVN.fold
 public class VietnameseCommandParser {
 
     private final DeviceRegistry registry;
-
+    private static final int MIN_DEVICE_SCORE = 6;
     public VietnameseCommandParser(DeviceRegistry registry) {
         this.registry = registry;
     }
@@ -28,7 +28,12 @@ public class VietnameseCommandParser {
     public ParseResult parse(String raw) {
         ParseResult out = new ParseResult();
         out.raw = raw;
+
         String f = fold(raw);
+        if (f == null || f.trim().isEmpty()) {
+            // Không thể nghe
+            return out; // giữ UNKNOWN/-1 theo mặc định
+        }
 
         // 1) Action
         if (f.matches(".*\\b(bat|mo|bật|mở)\\b.*")) out.action = Action.TURN_ON;
@@ -38,33 +43,30 @@ public class VietnameseCommandParser {
         else if (f.matches(".*\\b(dat|đặt|set)\\b.*")) out.action = Action.SET;
         else out.action = Action.UNKNOWN;
 
-        // 2) Value (mức/%) — bắt “mức 3”, “về 70%”, “70 phần trăm”
+        // 2) Value
         Integer value = extractValue(f);
-        out.value = value;
+        out.value = (value != null) ? value : -1;
 
-        // 3) Room (tìm các cụm “phòng ...”)
+        // 3) Room
         String room = extractRoom(f);
-        out.room = room;
+        out.room = (room != null) ? room : "UNKNOWN";
 
-        // 4) Device: tìm cụm tên thiết bị tự do
-        //    - Ưu tiên cụm sau từ khóa “đèn|quat|máy lạnh|cửa|rèm …” nếu có
-        String devicePhrase = extractDevicePhrase(f);
-        Device device = null;
-
-        if (devicePhrase != null) {
-            device = registry.findByPhrase(devicePhrase);
-        }
-        if (device == null) {
-            // fuzzy theo toàn câu + room
-            device = registry.fuzzyFind(f, room);
+        // 4) ĐÁNH GIÁ LIÊN QUAN TỚI THIẾT BỊ
+        int topScore = registry.estimateTopScore(f, room);
+        if (topScore < MIN_DEVICE_SCORE) {
+            // Câu nói không liên quan/không đủ tự tin → KHÔNG tra cứu thiết bị
+            // Giữ deviceId=-1, deviceName="UNKNOWN"
+            return out;
         }
 
-        if (device != null) {
-            out.deviceId = device.id;
-            out.deviceName = device.name;
-            if (out.room == null) out.room = device.room; // điền room từ registry nếu người dùng không nói
+        // 5) Nếu đủ tự tin mới tra cứu ứng viên & gán device
+        List<DeviceRegistry.CandidateResult> cands = registry.rankCandidates(f, room, 1);
+        if (!cands.isEmpty()) {
+            Device d = cands.get(0).device;
+            out.deviceId = d.id;
+            out.deviceName = d.name;
+            if ("UNKNOWN".equals(out.room)) out.room = d.room;
         }
-
         return out;
     }
 

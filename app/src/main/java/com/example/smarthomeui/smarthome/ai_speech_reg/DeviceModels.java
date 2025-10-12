@@ -7,18 +7,23 @@ public class DeviceModels {
 
     public static class ParseResult {
         public Action action = Action.UNKNOWN;
-        public Integer deviceId;         // nullable
-        public String deviceName;        // như người dùng đặt
-        public String room;              // nullable
-        public Integer value;            // mức/%, nullable
-        public String raw;               // câu gốc
+        public Integer deviceId = -1;        // -1 khi không rõ
+        public String deviceName = "UNKNOWN";
+        public String room = "UNKNOWN";
+        public Integer value = -1;           // -1 khi không rõ
+        public String raw;
+
+        public boolean isDeviceKnown() { return deviceId != null && deviceId >= 0; }
+        public boolean isActionKnown() { return action != Action.UNKNOWN; }
+        public boolean isValueKnown()  { return value != null && value >= 0; }
+        public boolean isRoomKnown()   { return room != null && !"UNKNOWN".equals(room); }
 
         @Override public String toString() {
-            return "Đã " + action +
-                    " cho thiết bị " + deviceId +
-                    " tên " + deviceName +
-                    " ở phòng " + room +
-                    " với giá trị " + value;
+            return "action=" + action +
+                    ", deviceId=" + deviceId +
+                    ", deviceName=" + deviceName +
+                    ", room=" + room +
+                    ", value=" + value;
         }
     }
 

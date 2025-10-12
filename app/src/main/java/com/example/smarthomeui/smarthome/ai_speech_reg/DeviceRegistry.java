@@ -88,5 +88,9 @@ public class DeviceRegistry {
         return list;
     }
 
+    public int estimateTopScore(String deviceText, @Nullable String roomTextOpt) {
+        List<CandidateResult> cands = rankCandidates(deviceText, roomTextOpt, 1);
+        return cands.isEmpty() ? 0 : cands.get(0).score;
+    }
 }
 

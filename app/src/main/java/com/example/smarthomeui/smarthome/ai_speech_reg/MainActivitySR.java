@@ -1,151 +1,158 @@
 package com.example.smarthomeui.smarthome.ai_speech_reg;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.os.Bundle;
-import android.widget.Button;
-import android.widget.TextView;
-import android.widget.Toast;
+import static com.example.smarthomeui.smarthome.ai_speech_reg.DeviceModels.*;
+import com.example.smarthomeui.R;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.speech.RecognitionListener;
+import android.speech.SpeechRecognizer;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
+import androidx.core.app.ActivityCompat;
 
-import com.example.smarthomeui.R;
-import com.example.smarthomeui.smarthome.ai_speech_reg.DeviceController;
-import com.example.smarthomeui.smarthome.ai_speech_reg.ApiFactory;
-import com.example.smarthomeui.smarthome.ai_speech_reg.DeviceApi;
-import com.example.smarthomeui.smarthome.ai_speech_reg.Command;
-import com.example.smarthomeui.smarthome.ai_speech_reg.SpeechHelper;
-import com.example.smarthomeui.smarthome.ai_speech_reg.VietnameseCommandParser;
-
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivitySR extends AppCompatActivity {
 
+    private TextView tvHeard, tvResult;
+    private FloatingActionButton fabMic;
 
-    //Chỉnh lại cho đúng môi trường test của bạn
-    private static final String BASE_URL = "http://10.0.2.2:5149/"; // Emulator → PC
-    private static final String TOKEN = "REPLACE_ME"; // chỉ phần token, KHÔNG có chữ Bearer
+    private SpeechRecognizer recognizer;
+    private SpeechHelper speechHelper;
 
-
-    private SpeechHelper speech;
+    private DeviceRegistry registry;
     private VietnameseCommandParser parser;
-    private DeviceController controller;
 
-
-    private TextView tvStatus, tvPartial, tvFinal;
-
-
-    private final ActivityResultLauncher<String> micPermission =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (!isGranted) Toast.makeText(this, "Cần quyền micro", Toast.LENGTH_SHORT).show();
+    private final ActivityResultLauncher<String> micPermLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) startListening();
             });
-
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.ai_speech_recognition);
 
+        tvHeard = findViewById(R.id.tvHeard);
+        tvResult = findViewById(R.id.tvResult);
+        fabMic  = findViewById(R.id.fabMic);
 
-        tvStatus = findViewById(R.id.tvStatus);
-        tvPartial = findViewById(R.id.tvPartial);
-        tvFinal = findViewById(R.id.tvFinal);
-        Button btnMic = findViewById(R.id.btnMic);
+        registry = new DeviceRegistry();
+        parser   = new VietnameseCommandParser(registry);
+        speechHelper = new SpeechHelper(this);
 
+        fabMic.setOnClickListener(v -> requestMicAndStart());
 
-        ensureMicPermission();
-
-
-        speech = new SpeechHelper(this);
-        parser = new VietnameseCommandParser();
-
-
-        DeviceApi api = ApiFactory.create(BASE_URL, TOKEN);
-        controller = new DeviceController(api);
-
-
-        btnMic.setOnClickListener(v -> {
-            tvStatus.setText("Đang nghe...");
-            speech.start(new SpeechHelper.Listener() {
-                @Override
-                public void onPartial(String text) {
-                    tvPartial.setText(text);
-                }
-
-                @Override
-                public void onFinal(String text) {
-                    tvFinal.setText(text);
-                    handleCommand(text);
-                }
-
-                @Override
-                public void onError(String message) {
-                    tvStatus.setText(message);
-                }
-            });
-        });
     }
 
-    private void handleCommand(String spoken) {
-        Command c = parser.parse(spoken);
-        if (c == null) {
-            toast("Không hiểu lệnh 😅");
-            return;
-        }
-
-
-// Demo: map nhanh alias → deviceId. Bạn thay bằng map thực từ API của bạn.
-        int deviceId = mapAliasToId(c.device, c.location);
-        if (deviceId <= 0) {
-            toast("Chưa biết deviceId cho: " + c.device + " - " + c.location);
-            return;
-        }
-
-
-        tvStatus.setText("Thực hiện: " + c);
-        switch (c.intent) {
-            case ON:
-                controller.turnOn(deviceId, ok -> runOnUiThread(() -> toast(ok ? "Bật OK" : "Bật lỗi")));
-                break;
-            case OFF:
-                controller.turnOff(deviceId, ok -> runOnUiThread(() -> toast(ok ? "Tắt OK" : "Tắt lỗi")));
-                break;
-            case SET_BRIGHTNESS:
-                int v = c.percentOrValue == null ? 50 : c.percentOrValue;
-                controller.setBrightness(deviceId, v, ok -> runOnUiThread(() -> toast(ok ? "Sáng " + v + "% OK" : "Độ sáng lỗi")));
-                break;
-            default:
-                toast("Intent chưa hỗ trợ: " + c.intent);
-        }
-    }
-
-
-    private int mapAliasToId(String device, String location) {
-        // Ví dụ cứng: đèn phòng khách → id=1
-        if ("light".equals(device) && "living_room".equals(location)) return 1;
-        // TODO: gọi API /api/device để lấy thật danh sách và map theo tên/phòng → id
-        return -1;
-    }
-
-    private void ensureMicPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+    private void requestMicAndStart() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
-            micPermission.launch(Manifest.permission.RECORD_AUDIO);
+            micPermLauncher.launch(Manifest.permission.RECORD_AUDIO);
+        } else {
+            startListening();
         }
     }
 
-
-    private void toast(String m) {
-        Toast.makeText(this, m, Toast.LENGTH_SHORT).show();
+    private void startListening() {
+        stopListening(); // dọn nếu có
+        recognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        recognizer.setRecognitionListener(new RecognitionListener() {
+            @Override public void onReadyForSpeech(Bundle params) { tvHeard.setText("Đang lắng nghe…"); }
+            @Override public void onBeginningOfSpeech() {}
+            @Override public void onRmsChanged(float rmsdB) {}
+            @Override public void onBufferReceived(byte[] buffer) {}
+            @Override public void onEndOfSpeech() {}
+            @Override public void onError(int error) { tvHeard.setText("Lỗi ghi âm: " + error); }
+            @Override public void onPartialResults(Bundle partialResults) {
+                ArrayList<String> list = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                if (list != null && !list.isEmpty()) {
+                    tvHeard.setText("Bạn nói (tạm): " + list.get(0));
+                }
+            }
+            @Override public void onEvent(int eventType, Bundle params) {}
+            @Override public void onResults(Bundle results) {
+                ArrayList<String> list = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                String text = (list != null && !list.isEmpty()) ? list.get(0) : "";
+                tvHeard.setText("Bạn nói: " + text);
+                emitParse(text);
+            }
+        });
+        Intent intent = speechHelper.buildIntentVI();
+        recognizer.startListening(intent);
     }
 
+    private void stopListening() {
+        if (recognizer != null) {
+            recognizer.cancel();
+            recognizer.destroy();
+            recognizer = null;
+        }
+    }
+
+    private void emitParse(String text) {
+        DeviceModels.ParseResult r = parser.parse(text);
+
+        // Lấy top-N ứng viên (ví dụ 5)
+        List<DeviceRegistry.CandidateResult> cands =
+                registry.rankCandidates(text, r.room, 5);
+
+        if (cands.isEmpty()) {
+            tvResult.setText("Không tìm thấy thiết bị phù hợp. Hãy nói rõ tên/ phòng.");
+            return;
+        }
+
+        // Cập nhật planned device từ ứng viên đầu tiên tạm thời (chỉ để hiển thị)
+        r.deviceId = cands.get(0).device.id;
+        r.deviceName = cands.get(0).device.name;
+        if (r.room == null) r.room = cands.get(0).device.room;
+
+        // Hiển thị bottom sheet xác nhận
+        DeviceConfirmSheet sheet = new DeviceConfirmSheet(
+                this, cands, r,
+                new DeviceConfirmSheet.Callback() {
+                    @Override
+                    public void onConfirmed(DeviceModels.Device d, DeviceModels.ParseResult planned) {
+                        // Gắn lại đúng device đã xác nhận
+                        planned.deviceId = d.id;
+                        planned.deviceName = d.name;
+                        if (planned.room == null) planned.room = d.room;
+                        // (Chưa có API) -> log/hiển thị
+                        String line = planned.toString();
+                        tvResult.setText("XÁC NHẬN! " + line);
+                        android.widget.Toast.makeText(MainActivitySR.this,
+                                "Thực hiện: " + line, android.widget.Toast.LENGTH_SHORT).show();
+
+                        // TODO: Sau này gọi API điều khiển tại đây
+                        // callControlApi(planned);
+                    }
+                    @Override public void onCanceled() {
+                        tvResult.setText("Bạn đã huỷ.");
+                    }
+                }
+        );
+        sheet.show();
+
+        // Hiện câu đã nghe
+        tvHeard.setText("Bạn nói: " + text);
+    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (speech != null) speech.destroy();
+        stopListening();
     }
 }

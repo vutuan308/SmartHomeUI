@@ -13,7 +13,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
     // NHỚ có dấu / cuối
-    private static final String BASE_URL = "https://4044b04d9a02.ngrok-free.app/";
+    private static final String BASE_URL = "https://4e88288326ea.ngrok-free.app/";
 
     private static Retrofit authedRetrofit;
     private static Retrofit noAuthRetrofit;

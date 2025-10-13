@@ -3,6 +3,7 @@ package com.example.smarthomeui.smarthome.ui.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -12,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.adapter.HouseAdapter;
+import com.example.smarthomeui.smarthome.ai_speech_reg.MainActivitySR;
 import com.example.smarthomeui.smarthome.model.House;
 import com.example.smarthomeui.smarthome.network.Api;
 import com.example.smarthomeui.smarthome.network.ApiClient;
@@ -37,6 +39,8 @@ public class HouseListActivity extends BaseActivity {
 
     private View loadingView;
     private boolean isLoading = false;
+
+    private ImageView ivPlus;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -107,6 +111,7 @@ public class HouseListActivity extends BaseActivity {
     private void initUserViews() {
         tvUserEmail = findViewById(R.id.tvUserEmail);
         tvUserName  = findViewById(R.id.tvUserName);
+        ivPlus = findViewById(R.id.ivPlus);
     }
 
     private void setupRecycler() {
@@ -224,6 +229,8 @@ public class HouseListActivity extends BaseActivity {
         View ivSetting = findViewById(R.id.ivSetting);
         if (ivSetting != null) ivSetting.setOnClickListener(v ->
                 startActivity(new Intent(this, SettingsActivity.class)));
+
+        ivPlus.setOnClickListener(v -> startActivity(new Intent(this, MainActivitySR.class)));
 
         // đánh dấu tab Home
         View ivHome = findViewById(R.id.ivHome);

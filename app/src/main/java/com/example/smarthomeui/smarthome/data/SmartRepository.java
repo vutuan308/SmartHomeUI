@@ -166,6 +166,12 @@ public class SmartRepository {
         return false;
     }
 
+
+    // tiện tra houseId theo roomId (dùng cho MainActivitySR -> RoomDetails)
+    public String getHouseIdByRoomId(String roomId) { return roomToHouse.get(roomId); }
+
+    /* ====================== DEVICES (trong phòng) ====================== */
+
     /* ====================== DEVICES ====================== */
     public void addDevice(String houseId, String roomId, Device d) {
         Room r = getRoomById(houseId, roomId);

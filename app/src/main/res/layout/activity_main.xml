@@ -6,11 +6,23 @@
     android:layout_height="match_parent"
     android:background="@drawable/background"
     tools:context=".smarthome.ui.activity.MainActivity">
-
+    <!-- Giao diện home -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
+        <FrameLayout
+            android:id="@+id/loadingView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:background="#80000000">
 
+            <ProgressBar
+                style="?android:attr/progressBarStyleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"/>
+        </FrameLayout>
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -36,12 +48,22 @@
                         app:civ_circle_background_color="@color/white" />
 
                     <TextView
+                        android:id="@+id/tvUserName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Hi, Gopal"
+                        android:text="Hello!"
                         android:textColor="@color/white"
-                        android:textSize="16dp"
+                        android:textSize="18sp"
                         android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvUserEmail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="user@email.com"
+                        android:textColor="@color/white_70"
+                        android:textSize="13sp"
+                        tools:ignore="TextSizeCheck" />
 
                     <TextView
                         android:layout_width="wrap_content"

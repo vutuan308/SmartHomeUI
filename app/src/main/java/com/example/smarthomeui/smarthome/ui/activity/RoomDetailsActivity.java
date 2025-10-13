@@ -99,16 +99,18 @@ public class RoomDetailsActivity extends AppCompatActivity {
                 .setPositiveButton("Thêm vào phòng", (dlg, w) -> {
                     Device picked = inv.get(selected[0]);
 
-                    // Gán vào phòng (removeFromInventory = true: lấy ra khỏi kho)
-                    SmartRepository.get(this).assignInventoryDeviceToRoom(
-                            picked.getId(), houseId, roomId, /*removeFromInventory*/ false
+                    // Gán vào phòng (sẽ tự động xóa khỏi inventory)
+                    boolean success = SmartRepository.get(this).assignInventoryDeviceToRoom(
+                            picked.getId(), houseId, roomId
                     );
 
-                    // Cập nhật UI (thiết bị đã được thêm vào list của room)
-                    int newPos = devices.size() - 1;
-                    if (newPos < 0) newPos = 0;
-                    adapter.notifyItemInserted(newPos);
-                    rv.smoothScrollToPosition(newPos);
+                    if (success) {
+                        // Cập nhật UI (thiết bị đã được thêm vào list của room)
+                        int newPos = devices.size() - 1;
+                        if (newPos < 0) newPos = 0;
+                        adapter.notifyItemInserted(newPos);
+                        rv.smoothScrollToPosition(newPos);
+                    }
                 })
                 .show();
     }

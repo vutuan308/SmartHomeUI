@@ -47,7 +47,9 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         // Thiết lập giao diện full screen và status bar trong suốt
         if (Build.VERSION.SDK_INT >= 19) {
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            );
         }
         if (Build.VERSION.SDK_INT >= 21) {
             setWindowFlag(this, WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS, false);
@@ -60,122 +62,102 @@ public class LoginActivity extends AppCompatActivity {
         handleIntentData();
     }
 
-    /**
-     * Khởi tạo các view components
-     */
+    /** Khởi tạo các view components */
     private void initViews() {
-        etEmail = findViewById(R.id.etEmail);
+        etEmail    = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
     }
 
-    /**
-     * Xử lý dữ liệu từ Intent (auto-fill email từ RegisterActivity)
-     */
+    /** Xử lý dữ liệu từ Intent (auto-fill email từ RegisterActivity) */
     private void handleIntentData() {
-        // Auto-fill email nếu được truyền từ RegisterActivity
         String email = getIntent().getStringExtra("email");
         if (email != null && !email.isEmpty()) {
             etEmail.setText(email);
         }
     }
 
-    /**
-     * Xử lý sự kiện khi người dùng ấn nút Đăng nhập
-     * TODO: Tích hợp API đăng nhập từ backend
-     */
+    /** Click nút Đăng nhập */
     public void onLoginClicked(View view) {
-        // Lấy thông tin đăng nhập từ form
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
-
-        // TODO: Thay thế bằng validation thật và call API đăng nhập
-        // Hiện tại cho phép đăng nhập thành công để test UI
         performLogin(email, password);
     }
 
-    /**
-     * Thực hiện đăng nhập
-     * @param email Email đăng nhập
-     * @param password Mật khẩu đăng nhập
-     */
+    /** Thực hiện đăng nhập */
     private void performLogin(String email, String password) {
-        // Kiểm tra input
         if (email.isEmpty() || password.isEmpty()) {
             showError("Vui lòng nhập đầy đủ email và mật khẩu.");
             return;
         }
 
-        // Gọi API đăng nhập
-        Api apiService = ApiClient.getClient().create(Api.class);
+        // Dùng client NO-AUTH cho login
+        Api apiService = ApiClient.getClientNoAuth().create(Api.class);
         LoginRequest request = new LoginRequest(email, password);
 
         apiService.login(request).enqueue(new Callback<LoginResponse>() {
             @Override
             public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    LoginResponse loginResponse = response.body();
-
-                    // Lưu session dựa trên thông tin có sẵn từ API
-                    UserManager userManager = new UserManager(LoginActivity.this);
-
-                    // Lấy token (hỗ trợ cả "token" và "accessToken")
-                    String token = loginResponse.getAccessToken();
-
-                    if (token != null && !token.isEmpty()) {
-                        // Tính thời gian hết hạn token (mặc định 24 giờ nếu API không trả về)
-                        long currentTime = System.currentTimeMillis();
-                        long expiryTime = currentTime + (24 * 60 * 60 * 1000); // 24 giờ
-
-                        // Nếu API có trả về expiresIn thì sử dụng
-                        if (loginResponse.getExpiresIn() > 0) {
-                            expiryTime = currentTime + (loginResponse.getExpiresIn() * 1000);
-                        }
-
-                        // Lưu thông tin session với dữ liệu có sẵn
-                        String userRole = "user"; // Mặc định là user
-                        String userId = email; // Dùng email làm ID tạm thời
-
-                        // Nếu API có trả về thông tin user chi tiết
-                        if (loginResponse.getUser() != null) {
-                            userRole = loginResponse.getUser().getRole() != null ?
-                                      loginResponse.getUser().getRole() : "user";
-                            userId = loginResponse.getUser().getId() != null ?
-                                    loginResponse.getUser().getId() : email;
-                        }
-
-                        // Lưu session
-                        userManager.saveUserSession(
-                            token,
-                            loginResponse.getRefreshToken(), // Có thể null
-                            email,
-                            userRole,
-                            userId,
-                            expiryTime
-                        );
-
-                        Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-                        navigateToHome(userRole);
-                    } else {
-                        showError("Không nhận được token từ server.");
-                    }
-                } else {
+                if (!response.isSuccessful() || response.body() == null) {
                     showError("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
+                    return;
                 }
+
+                LoginResponse loginResponse = response.body();
+
+                // Lấy token (accessToken) và chuẩn hoá (bỏ "Bearer " nếu có)
+                String token = loginResponse.getAccessToken();
+                if (token != null && token.startsWith("Bearer ")) {
+                    token = token.substring(7);
+                }
+
+                if (token == null || token.isEmpty()) {
+                    showError("Không nhận được token từ server.");
+                    return;
+                }
+
+                // Tính thời gian hết hạn token
+                long currentTime = System.currentTimeMillis();
+                long expiryTime = currentTime + (24 * 60 * 60 * 1000); // mặc định 24h
+                if (loginResponse.getExpiresIn() > 0) {
+                    expiryTime = currentTime + (loginResponse.getExpiresIn() * 1000L);
+                }
+
+                // Lưu session
+                String userRole = "user";
+                String userId   = email;
+                if (loginResponse.getUser() != null) {
+                    if (loginResponse.getUser().getRole() != null) {
+                        userRole = loginResponse.getUser().getRole();
+                    }
+                    if (loginResponse.getUser().getId() != null) {
+                        userId = loginResponse.getUser().getId();
+                    }
+                }
+
+                new UserManager(LoginActivity.this).saveUserSession(
+                        token,                                 // <-- CHỈ JWT, KHÔNG kèm "Bearer "
+                        loginResponse.getRefreshToken(),       // có thể null
+                        email,
+                        userRole,
+                        userId,
+                        expiryTime
+                );
+
+                Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
+                navigateToHome(userRole);
             }
 
             @Override
             public void onFailure(Call<LoginResponse> call, Throwable t) {
-                showError("Lỗi kết nối: " + t.getMessage());
+                showError("Lỗi kết nối: " + (t != null ? t.getMessage() : "Không xác định"));
             }
         });
     }
 
-    /**
-     * Chuyển đến màn hình chính sau khi đăng nhập thành công
-     */
+    /** Chuyển đến màn hình chính sau khi đăng nhập thành công */
     private void navigateToHome(String userRole) {
         Intent intent;
-        if ("admin".equals(userRole)) {
+        if ("admin".equalsIgnoreCase(userRole)) {
             intent = new Intent(getApplicationContext(), AdminDashboardActivity.class);
         } else {
             intent = new Intent(getApplicationContext(), HouseListActivity.class);
@@ -184,22 +166,17 @@ public class LoginActivity extends AppCompatActivity {
         finish();
     }
 
-    // Overload method cũ để tương thích
+    // Overload cũ (nếu cần)
     private void navigateToHome() {
         navigateToHome("user");
     }
 
-    /**
-     * Hiển thị thông báo lỗi
-     * @param message Nội dung lỗi
-     */
+    /** Hiển thị thông báo lỗi */
     private void showError(String message) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     public void onRegisterClicked(View view) {
-        // Chuyển đến màn đăng ký
-        Intent intent = new Intent(this, RegisterActivity.class);
-        startActivity(intent);
+        startActivity(new Intent(this, RegisterActivity.class));
     }
 }

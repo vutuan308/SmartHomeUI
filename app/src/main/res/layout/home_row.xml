@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home/Room card item: dùng chung cho HouseAdapter (hiển thị "x phòng")
-     và RoomAdapter (hiển thị "x thiết bị") -->
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/card_view"
@@ -21,20 +19,36 @@
             android:layout_alignParentBottom="true"
             android:background="@drawable/bg_5" />
 
-        <!-- Nội dung chính: icon + tiêu đề phòng/nhà -->
+        <!-- Nội dung chính: icon + tiêu đề + location -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:padding="10dp">
 
-            <ImageView
-                android:id="@+id/ivRoomIcon"
-                android:layout_width="70dp"
-                android:layout_height="70dp"
-                android:layout_gravity="center"
-                android:src="@drawable/ic_double_bed"
-                android:contentDescription="@string/app_name" />
+            <!-- Thêm nút menu ở góc trên bên phải -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    android:id="@+id/ivRoomIcon"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:layout_centerHorizontal="true"
+                    android:src="@drawable/ic_double_bed"
+                    android:contentDescription="@string/app_name" />
+
+                <ImageButton
+                    android:id="@+id/btnMenuOptions"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_alignParentTop="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_more_vert"
+                    android:contentDescription="Menu tùy chọn" />
+            </RelativeLayout>
 
             <TextView
                 android:id="@+id/tvRoomName"
@@ -46,6 +60,20 @@
                 android:textSize="20sp"
                 android:textStyle="bold" />
 
+            <!-- Subtitle: hiển thị chi tiết phòng (detail) -->
+            <TextView
+                android:id="@+id/tvSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:textColor="@color/textColor"
+                android:textSize="14sp"
+                android:drawablePadding="6dp"
+                android:paddingTop="2dp"
+                android:text="Mô tả phòng"
+                android:visibility="visible" />
         </LinearLayout>
 
         <!-- Thanh thông tin + công tắc -->
@@ -66,7 +94,6 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <!-- Dùng MaterialSwitch thay SwitchButton custom -->
             <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/swMaster"
                 android:layout_width="65dp"
@@ -76,5 +103,4 @@
                 android:checked="false" />
         </RelativeLayout>
     </RelativeLayout>
-
 </androidx.cardview.widget.CardView>

@@ -13,6 +13,8 @@
     <color name="textColor">#333333</color>
     <color name="hintColor">#999999</color>
     <color name="titleColor">#2C2C2C</color>
+    <color name="headerChipBg">#26FFFFFF</color>     <!-- trắng 15% trên nền cam -->
+    <color name="headerChipStroke">#33FFFFFF</color> <!-- viền trắng 20% -->
 
     <!-- Status Colors -->
     <color name="green">#4CAF50</color>

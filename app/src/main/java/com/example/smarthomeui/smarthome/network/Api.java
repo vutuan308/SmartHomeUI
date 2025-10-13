@@ -1,18 +1,59 @@
 package com.example.smarthomeui.smarthome.network;
 
 import retrofit2.Call;
-import retrofit2.http.Body;
-import retrofit2.http.GET;
-import retrofit2.http.Header;
-import retrofit2.http.POST;
+import retrofit2.http.*;
 
 public interface Api {
+    // ===== AUTH / PROFILE (đã có) =====
     @POST("/api/auth/login")
     Call<LoginResponse> login(@Body LoginRequest request);
 
+    @GET("/api/auth/profile")
+    Call<ProfileResponse> getProfile();
     @POST("/api/auth/register")
     Call<RegisterResponse> register(@Body RegisterRequest request);
+    // ===== HOUSE =====
+    // Danh sách nhà theo user (có phân trang)
+    @GET("/api/house")
+    Call<HouseListWrap> getHouses(@Query("skip") int skip,
+                                  @Query("take") int take);
 
-    @GET("/api/auth/profile")
-    Call<ProfileResponse> getProfile(@Header("Authorization") String authToken);
+    // Chi tiết 1 nhà
+    @GET("/api/house/{id}")
+    Call<HouseDto> getHouseById(@Path("id") int id);
+
+    // Tạo nhà
+    @POST("/api/house")
+    Call<HouseDto> createHouse(@Body CreateHouseReq body);
+
+    // Cập nhật nhà
+    @PUT("/api/house/{id}")
+    Call<HouseDto> updateHouse(@Path("id") int id,
+                               @Body UpdateHouseReq body);
+
+    // Xoá nhà
+    @DELETE("/api/house/{id}")
+    Call<Void> deleteHouse(@Path("id") int id);
+
+    // GET Danh sách phòng
+    @GET("/api/room")
+    Call<RoomsByHouseWrap> getRoomsGrouped(@Query("skip") int skip, @Query("take") int take);
+
+    // GET Danh sách phòng theo nhà
+    @GET("/api/house/{houseId}/rooms")
+    Call<RoomListWrap> getRoomsByHouseId(@Path("houseId") int houseId,
+                                       @Query("skip") int skip,
+                                       @Query("take") int take);
+
+    // Tạo phòng mới
+    @POST("/api/room")
+    Call<RoomDto> createRoom(@Body CreateRoomReq body);
+
+    // Cập nhật phòng
+    @PUT("/api/room/{id}")
+    Call<RoomDto> updateRoom(@Path("id") int id, @Body UpdateRoomReq body);
+
+    // Xóa phòng
+    @DELETE("/api/room/{id}")
+    Call<Void> deleteRoom(@Path("id") int id);
 }

@@ -19,6 +19,9 @@ public class Device implements Serializable {
     private String name;
     private String type;     // "Light", "Fan", "AC", "Outlet", ...
     private boolean on;
+    private String room;     // Thêm thuộc tính room
+    private int value;       // Thêm thuộc tính value (brightness, speed, etc.)
+    private String powerConsumption; // Thêm thuộc tính công suất tiêu thụ
 
     // Token để đăng ký thiết bị (yêu cầu của bạn)
     private String token;
@@ -44,17 +47,89 @@ public class Device implements Serializable {
         this.token = token;
     }
 
+    // Constructor mới để tương thích với DeviceManagementActivity
+    public Device(String id, String name, String room, String type, boolean online, int value, String powerConsumption) {
+        this.id = id;
+        this.name = name;
+        this.room = room;
+        this.type = type;
+        this.on = online;
+        this.value = value;
+        this.powerConsumption = powerConsumption;
+    }
+
     // ======= GET/SET cơ bản =======
     public String getId() { return id; }
     public String getName() { return name; }
     public String getType() { return type; }
     public boolean isOn() { return on; }
+    public boolean isOnline() { return on; } // Alias cho isOn
     public String getToken() { return token; }
+    public String getRoom() { return room; }
+    public int getValue() { return value; }
+    public String getPowerConsumption() { return powerConsumption; }
 
     public void setName(String name) { this.name = name; }
     public void setType(String type) { this.type = type; }
     public void setOn(boolean on) { this.on = on; }
+    public void setOnline(boolean online) { this.on = online; } // Alias cho setOn
     public void setToken(String token) { this.token = token; }
+    public void setRoom(String room) { this.room = room; }
+    public void setValue(int value) { this.value = value; }
+    public void setPowerConsumption(String powerConsumption) { this.powerConsumption = powerConsumption; }
+
+    // ======= Thêm các method mới cho DeviceAdminAdapter =======
+
+    /**
+     * Lấy thông tin hoạt động cuối cùng của thiết bị
+     * @return String mô tả hoạt động cuối cùng
+     */
+    public String getLastActivity() {
+        if (on) {
+            return "Hoạt động " + getFormattedTime();
+        } else {
+            return "Tắt " + getFormattedTime();
+        }
+    }
+
+    /**
+     * Lấy trạng thái hiện tại của thiết bị
+     * @return String trạng thái (Online/Offline)
+     */
+    public String getStatus() {
+        return on ? "Online" : "Offline";
+    }
+
+    /**
+     * Lấy text hiển thị giá trị hiện tại của thiết bị
+     * @return String mô tả giá trị hiện tại
+     */
+    public String getValueText() {
+        if (!on) {
+            return "Tắt";
+        }
+
+        // Hiển thị giá trị dựa trên loại thiết bị
+        if (has(CAP_BRIGHTNESS)) {
+            return brightness + "%";
+        } else if (has(CAP_SPEED)) {
+            return "Tốc độ " + speed;
+        } else if (has(CAP_TEMPERATURE)) {
+            return temperature + "°C";
+        } else {
+            return "Bật";
+        }
+    }
+
+    /**
+     * Helper method để format thời gian
+     * @return String thời gian đã format
+     */
+    private String getFormattedTime() {
+        // Giả lập thời gian hoạt động (có thể thay thế bằng timestamp thực tế)
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault());
+        return sdf.format(new java.util.Date());
+    }
 
     // ======= Capabilities API (giải quyết lỗi .has / CAP_COLOR) =======
     public Device addCaps(String... caps) {

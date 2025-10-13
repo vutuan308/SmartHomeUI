@@ -1,5 +1,6 @@
 package com.example.smarthomeui.smarthome.adapter;
 
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,6 +47,17 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
         h.tvName.setText(r.getName());
         h.tvCount.setText(r.getDeviceCount() + " thiết bị");
 
+        // Hiển thị thông tin chi tiết (detail) của phòng nếu có
+        if (h.tvSubtitle != null) {
+            String detail = r.getDescription();
+            if (!TextUtils.isEmpty(detail)) {
+                h.tvSubtitle.setVisibility(View.VISIBLE);
+                h.tvSubtitle.setText(detail);
+            } else {
+                h.tvSubtitle.setVisibility(View.GONE);
+            }
+        }
+
         h.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onClick(r);
         });
@@ -57,6 +69,18 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
             }
             return false;
         });
+
+        // Xử lý sự kiện click cho nút menu (3 chấm)
+        if (h.btnMenuOptions != null) {
+            h.btnMenuOptions.setOnClickListener(v -> {
+                if (longListener != null) {
+                    int pos = h.getBindingAdapterPosition();
+                    if (pos != RecyclerView.NO_POSITION) {
+                        longListener.onLongClick(r, pos); // Sử dụng cùng callback với long click
+                    }
+                }
+            });
+        }
     }
 
     @Override
@@ -66,13 +90,16 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.VH> {
 
     static class VH extends RecyclerView.ViewHolder {
         ImageView ivIcon;
-        TextView tvName, tvCount;
+        TextView tvName, tvCount, tvSubtitle;
+        View btnMenuOptions; // Add reference to the menu button
 
         VH(@NonNull View v) {
             super(v);
             ivIcon = v.findViewById(R.id.ivRoomIcon);
             tvName = v.findViewById(R.id.tvRoomName);
             tvCount = v.findViewById(R.id.tvDeviceCount);
+            tvSubtitle = v.findViewById(R.id.tvSubtitle); // Thêm tham chiếu đến tvSubtitle
+            btnMenuOptions = v.findViewById(R.id.btnMenuOptions); // Add the menu button reference
         }
     }
 }

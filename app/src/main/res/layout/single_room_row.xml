@@ -38,8 +38,7 @@
             <ImageView
                 android:id="@+id/ivDeviceIcon"
                 android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:src="@drawable/ic_device_other" />
+                android:layout_height="36dp" />
 
             <LinearLayout
                 android:layout_width="0dp"

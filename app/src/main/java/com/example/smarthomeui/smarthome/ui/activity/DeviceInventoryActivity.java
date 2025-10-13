@@ -40,6 +40,15 @@ import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.WiFiAccessPoint;
 import com.espressif.provisioning.listeners.ProvisionListener;
 
+// Import cho API
+import com.example.smarthomeui.smarthome.network.ApiClient;
+import com.example.smarthomeui.smarthome.network.Api;
+import com.example.smarthomeui.smarthome.network.DeviceListWrap;
+import com.example.smarthomeui.smarthome.network.DeviceDto;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 import java.util.*;
 
 import static com.example.smarthomeui.smarthome.model.Device.*;
@@ -127,12 +136,101 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         super.onResume();
         // Refresh inventory khi quay lại từ BLE scan flow
         refreshInventory();
+        // Load thiết bị từ API
+        loadDevicesFromAPI();
     }
 
     private void refreshInventory() {
         inventory.clear();
         inventory.addAll(SmartRepository.get(this).getInventory());
         adapter.notifyDataSetChanged();
+    }
+
+    private void loadDevicesFromAPI() {
+        Api api = ApiClient.getClient(this).create(Api.class);
+        Call<DeviceListWrap> call = api.getDevices(0, 100); // Load 100 devices đầu tiên
+
+        call.enqueue(new Callback<DeviceListWrap>() {
+            @Override
+            public void onResponse(Call<DeviceListWrap> call, Response<DeviceListWrap> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    DeviceListWrap deviceWrap = response.body();
+                    List<DeviceDto> apiDevices = deviceWrap.getDevices();
+
+                    if (apiDevices != null && !apiDevices.isEmpty()) {
+                        for (DeviceDto deviceDto : apiDevices) {
+                            // Chuyển đổi từ DeviceDto sang Device model
+                            Device device = convertApiDeviceToDevice(deviceDto);
+
+                            // Kiểm tra xem thiết bị đã tồn tại trong inventory chưa
+                            boolean exists = false;
+                            for (Device existingDevice : inventory) {
+                                if (existingDevice.getToken() != null &&
+                                    existingDevice.getToken().equals(String.valueOf(deviceDto.getId()))) {
+                                    exists = true;
+                                    break;
+                                }
+                            }
+
+                            if (!exists) {
+                                // Thêm vào local repository và UI
+                                SmartRepository.get(DeviceInventoryActivity.this).addToInventory(device);
+                                inventory.add(device);
+                            }
+                        }
+
+                        runOnUiThread(() -> {
+                            adapter.notifyDataSetChanged();
+                            Toast.makeText(DeviceInventoryActivity.this,
+                                "Đã tải " + apiDevices.size() + " thiết bị từ server",
+                                Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                } else {
+                    runOnUiThread(() ->
+                        Toast.makeText(DeviceInventoryActivity.this,
+                            "Không thể tải thiết bị từ server", Toast.LENGTH_SHORT).show());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DeviceListWrap> call, Throwable t) {
+                runOnUiThread(() -> {
+                    Log.e("API_LOAD_DEVICES", "Error loading devices", t);
+                    Toast.makeText(DeviceInventoryActivity.this,
+                        "Lỗi kết nối server: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+
+    private Device convertApiDeviceToDevice(DeviceDto deviceDto) {
+        String deviceId = UUID.randomUUID().toString();
+        String name = deviceDto.getName();
+        String type = deviceDto.getType();
+
+        Device device = new Device(deviceId, name, type, false);
+        device.setToken(String.valueOf(deviceDto.getId())); // Dùng API ID làm token
+
+        // Phân loại điều khiển dựa trên type - chỉ hỗ trợ quạt và đèn
+        String lowerType = type.toLowerCase(Locale.US);
+        if (lowerType.contains("light") || lowerType.contains("đèn")) {
+            // Thiết bị đèn
+            device.addCaps(CAP_POWER, CAP_BRIGHTNESS, CAP_COLOR);
+            device.setBrightness(100);
+            device.setColor(0xFFFFFFFF);
+        } else if (lowerType.contains("fan") || lowerType.contains("quạt")) {
+            // Thiết bị quạt
+            device.addCaps(CAP_POWER, CAP_SPEED);
+            device.setSpeed(1);
+        } else {
+            // Mặc định: thiết bị không xác định sẽ được coi như đèn
+            device.addCaps(CAP_POWER, CAP_BRIGHTNESS, CAP_COLOR);
+            device.setBrightness(100);
+            device.setColor(0xFFFFFFFF);
+        }
+
+        return device;
     }
 
     private void openAddToInventoryDialog() {
@@ -477,19 +575,18 @@ public class DeviceInventoryActivity extends AppCompatActivity {
             dev.setToken(token);
 
             String lower = type.toLowerCase(Locale.US);
-            if (lower.contains("light")) {
+            if (lower.contains("light") || lower.contains("đèn")) {
                 dev.addCaps(CAP_POWER, CAP_BRIGHTNESS, CAP_COLOR);
                 dev.setBrightness(100);
                 dev.setColor(0xFFFFFFFF);
-            } else if (lower.contains("fan")) {
+            } else if (lower.contains("fan") || lower.contains("quạt")) {
                 dev.addCaps(CAP_POWER, CAP_SPEED);
                 dev.setSpeed(1);
-            } else if (lower.equals("ac")) {
-                dev.addCaps(CAP_POWER, CAP_TEMPERATURE, CAP_SPEED);
-                dev.setTemperature(25);
-                dev.setSpeed(1);
             } else {
-                dev.addCaps(CAP_POWER);
+                // Mặc định: thiết bị không xác định sẽ được coi như đèn
+                dev.addCaps(CAP_POWER, CAP_BRIGHTNESS, CAP_COLOR);
+                dev.setBrightness(100);
+                dev.setColor(0xFFFFFFFF);
             }
 
             SmartRepository.get(this).addToInventory(dev);

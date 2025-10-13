@@ -64,7 +64,7 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@android:drawable/ic_dialog_email"
-                    android:tint="#757575"
+                    app:tint="#757575"
                     android:layout_marginEnd="8dp"/>
 
                 <TextView
@@ -87,7 +87,7 @@
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@android:drawable/ic_menu_call"
-                    android:tint="#757575"
+                    app:tint="#757575"
                     android:layout_marginEnd="8dp"/>
 
                 <TextView
@@ -109,7 +109,7 @@
             android:contentDescription="Xóa thành viên"
             android:padding="8dp"
             android:src="@android:drawable/ic_menu_delete"
-            android:tint="#F44336" />
+            app:tint="#F44336" />
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

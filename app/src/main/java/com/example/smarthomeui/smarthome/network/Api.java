@@ -56,4 +56,9 @@ public interface Api {
     // Xóa phòng
     @DELETE("/api/room/{id}")
     Call<Void> deleteRoom(@Path("id") int id);
+    // ===== DEVICE =====
+    // Danh sách thiết bị theo user (có phân trang)
+    @GET("/api/device")
+    Call<DeviceListWrap> getDevices(@Query("skip") int skip,
+                                    @Query("take") int take);
 }

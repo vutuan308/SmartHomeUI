@@ -37,3 +37,9 @@ captures/
 # .env
 # .history
 
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/.idea

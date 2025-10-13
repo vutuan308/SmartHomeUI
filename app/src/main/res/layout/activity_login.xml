@@ -152,7 +152,8 @@
                     android:text="Quên mật khẩu?"
                     android:textColor="@color/textColor"
                     android:textSize="14dp"
-                    android:textStyle="normal" />
+                    android:textStyle="normal"
+                    tools:ignore="TextSizeCheck" />
 
                 <!-- Nút đăng nhập -->
                 <TextView

@@ -14,6 +14,15 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.smarthomeui.R;
+import com.example.smarthomeui.smarthome.network.Api;
+import com.example.smarthomeui.smarthome.network.ApiClient;
+import com.example.smarthomeui.smarthome.network.LoginRequest;
+import com.example.smarthomeui.smarthome.network.LoginResponse;
+import com.example.smarthomeui.smarthome.utils.UserManager;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Smart Home - Login Activity
@@ -86,46 +95,98 @@ public class LoginActivity extends AppCompatActivity {
 
     /**
      * Thực hiện đăng nhập
-     * TODO: Call API đăng nhập thật từ backend
      * @param email Email đăng nhập
      * @param password Mật khẩu đăng nhập
      */
     private void performLogin(String email, String password) {
-        // TODO: Validation input
-        // - Kiểm tra email không rỗng và đúng định dạng
-        // - Kiểm tra password không rỗng
+        // Kiểm tra input
+        if (email.isEmpty() || password.isEmpty()) {
+            showError("Vui lòng nhập đầy đủ email và mật khẩu.");
+            return;
+        }
 
-        // TODO: Call API đăng nhập
-        // LoginRequest request = new LoginRequest(email, password);
-        // apiService.login(request).enqueue(new Callback<LoginResponse>() {
-        //     @Override
-        //     public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
-        //         if (response.isSuccessful() && response.body() != null) {
-        //             LoginResponse loginResponse = response.body();
-        //             // Lưu token, user info vào SharedPreferences
-        //             // Chuyển đến màn hình chính
-        //             navigateToHome();
-        //         } else {
-        //             showError("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
-        //         }
-        //     }
-        //     @Override
-        //     public void onFailure(Call<LoginResponse> call, Throwable t) {
-        //         showError("Lỗi kết nối. Vui lòng thử lại.");
-        //     }
-        // });
+        // Gọi API đăng nhập
+        Api apiService = ApiClient.getClient().create(Api.class);
+        LoginRequest request = new LoginRequest(email, password);
 
-        // Tạm thời: Đăng nhập thành công để test UI
-        Toast.makeText(this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-        navigateToHome();
+        apiService.login(request).enqueue(new Callback<LoginResponse>() {
+            @Override
+            public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    LoginResponse loginResponse = response.body();
+
+                    // Lưu session dựa trên thông tin có sẵn từ API
+                    UserManager userManager = new UserManager(LoginActivity.this);
+
+                    // Lấy token (hỗ trợ cả "token" và "accessToken")
+                    String token = loginResponse.getAccessToken();
+
+                    if (token != null && !token.isEmpty()) {
+                        // Tính thời gian hết hạn token (mặc định 24 giờ nếu API không trả về)
+                        long currentTime = System.currentTimeMillis();
+                        long expiryTime = currentTime + (24 * 60 * 60 * 1000); // 24 giờ
+
+                        // Nếu API có trả về expiresIn thì sử dụng
+                        if (loginResponse.getExpiresIn() > 0) {
+                            expiryTime = currentTime + (loginResponse.getExpiresIn() * 1000);
+                        }
+
+                        // Lưu thông tin session với dữ liệu có sẵn
+                        String userRole = "user"; // Mặc định là user
+                        String userId = email; // Dùng email làm ID tạm thời
+
+                        // Nếu API có trả về thông tin user chi tiết
+                        if (loginResponse.getUser() != null) {
+                            userRole = loginResponse.getUser().getRole() != null ?
+                                      loginResponse.getUser().getRole() : "user";
+                            userId = loginResponse.getUser().getId() != null ?
+                                    loginResponse.getUser().getId() : email;
+                        }
+
+                        // Lưu session
+                        userManager.saveUserSession(
+                            token,
+                            loginResponse.getRefreshToken(), // Có thể null
+                            email,
+                            userRole,
+                            userId,
+                            expiryTime
+                        );
+
+                        Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
+                        navigateToHome(userRole);
+                    } else {
+                        showError("Không nhận được token từ server.");
+                    }
+                } else {
+                    showError("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<LoginResponse> call, Throwable t) {
+                showError("Lỗi kết nối: " + t.getMessage());
+            }
+        });
     }
 
     /**
      * Chuyển đến màn hình chính sau khi đăng nhập thành công
      */
-    private void navigateToHome() {
-        startActivity(new Intent(getApplicationContext(), HouseListActivity.class));
+    private void navigateToHome(String userRole) {
+        Intent intent;
+        if ("admin".equals(userRole)) {
+            intent = new Intent(getApplicationContext(), AdminDashboardActivity.class);
+        } else {
+            intent = new Intent(getApplicationContext(), HouseListActivity.class);
+        }
+        startActivity(intent);
         finish();
+    }
+
+    // Overload method cũ để tương thích
+    private void navigateToHome() {
+        navigateToHome("user");
     }
 
     /**

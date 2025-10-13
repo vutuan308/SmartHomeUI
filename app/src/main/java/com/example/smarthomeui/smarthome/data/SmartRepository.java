@@ -12,177 +12,101 @@ import java.util.*;
 /** Repo demo: Nhà → Phòng → Thiết bị (seed nhiều thiết bị để test UI) */
 public class SmartRepository {
     private static SmartRepository instance;
-
     private final Map<String, House> houses = new LinkedHashMap<>();
-    // (tuỳ chọn) dùng để tra houseId từ roomId
-    private final Map<String, String> roomToHouse = new HashMap<>();
 
-    // ==== KHO THIẾT BỊ (inventory) – độc lập với phòng ====
-    private final List<Device> inventory = new ArrayList<>();
-
-    private SmartRepository(Context ctx) { seed(); }
+    private SmartRepository(Context ctx) {
+        seed(); // khởi tạo dữ liệu mẫu
+    }
 
     public static synchronized SmartRepository get(Context ctx) {
         if (instance == null) instance = new SmartRepository(ctx.getApplicationContext());
         return instance;
     }
 
-    /* ====================== INVENTORY (Kho) ====================== */
-    public List<Device> getInventory() { return new ArrayList<>(inventory); }
-
-    public void addToInventory(Device d) { inventory.add(d); }
-
-    public void removeFromInventory(String deviceId) {
-        for (Iterator<Device> it = inventory.iterator(); it.hasNext();) {
-            if (it.next().getId().equals(deviceId)) { it.remove(); break; }
-        }
-    }
-
-    /** Gán 1 thiết bị từ kho vào phòng (copy thuộc tính), có thể xoá khỏi kho sau khi gán */
-    public void assignInventoryDeviceToRoom(String deviceId, String houseId, String roomId, boolean removeFromInventory) {
-        Device src = null;
-        for (Device d : inventory) if (d.getId().equals(deviceId)) { src = d; break; }
-        if (src == null) return;
-
-        Room r = getRoomById(houseId, roomId);
-        if (r == null) return;
-
-        // clone nông với ID mới trong phòng + copy token/capabilities/thuộc tính
-        Device copy = new Device(UUID.randomUUID().toString(), src.getName(), src.getType(), src.isOn(), src.getToken());
-        copy.addCaps(src.getCapabilities().toArray(new String[0]));
-        copy.setBrightness(src.getBrightness());
-        copy.setColor(src.getColor());
-        copy.setSpeed(src.getSpeed());
-        copy.setTemperature(src.getTemperature());
-
-        r.getDevices().add(copy);
-        if (removeFromInventory) removeFromInventory(deviceId);
-    }
-
     /* ====================== SEED DATA (DEMO) ====================== */
     private void seed() {
         houses.clear();
-        roomToHouse.clear();
-        inventory.clear();
 
-        // ---- Seed INVENTORY (kho) mẫu ----
-        Device rgb = new Device(uuid(), "Bóng RGB E27", "light.rgb", false, "RGB-E27-001")
-                .addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
-        rgb.setBrightness(70);
-        rgb.setColor(0xFFFFC107); // amber
-        inventory.add(rgb);
+        // -------- House A --------
+        House houseA = new House(UUID.randomUUID().toString(), "Nhà Quận 1", R.drawable.home);
 
-        Device fan = new Device(uuid(), "Quạt trần 5 cánh", "fan.ceiling", false, "FAN-CEIL-002")
-                .addCaps(Device.CAP_POWER, Device.CAP_SPEED);
-        fan.setSpeed(2);
-        inventory.add(fan);
-
-        Device outlet = new Device(uuid(), "Ổ cắm Wi-Fi", "switch.outlet", true, "OUT-WIFI-003")
-                .addCaps(Device.CAP_POWER);
-        inventory.add(outlet);
-
-        // ---- House A ----
-        int icLiving  = safeIcon(R.drawable.ic_room_living, R.drawable.ic_room_generic);
-        int icBed     = safeIcon(R.drawable.ic_room_bed, R.drawable.ic_room_generic);
-        int icKitchen = safeIcon(R.drawable.ic_room_kitchen, R.drawable.ic_room_generic);
-
-        House houseA = new House(uuid(), "Nhà Quận 1", R.drawable.home);
-
-        Room a_living = new Room(uuid(), "Phòng khách", icLiving);
+        Room a_living = new Room(UUID.randomUUID().toString(), "Phòng khách", R.drawable.ic_room_living);
         // Đèn trần (bật, 80%, màu ấm)
-        Device denTran = new Device(uuid(), "Đèn trần", "Light", true)
-                .addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
-        denTran.setBrightness(80);
-        denTran.setColor(0xFFF2C179);
-        a_living.getDevices().add(denTran);
+        Device device1 = new Device(UUID.randomUUID().toString(), "Đèn trần", "Phòng khách", "Light", true, 80, "12W");
+        device1.setBrightness(80);
+        device1.setColor(0xFFF2C179);
+        a_living.getDevices().add(device1);
 
         // Đèn led hắt trần (tắt, 30%, xanh dương)
-        Device denHat = new Device(uuid(), "Đèn led hắt", "Light", false)
-                .addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
-        denHat.setBrightness(30);
-        denHat.setColor(0xFF4F8CFF);
-        a_living.getDevices().add(denHat);
+        Device device2 = new Device(UUID.randomUUID().toString(), "Đèn led hắt", "Phòng khách", "Light", false, 30, "8W");
+        device2.setBrightness(30);
+        device2.setColor(0xFF4F8CFF);
+        a_living.getDevices().add(device2);
 
         // Quạt trần (bật, tốc độ 2)
-        Device quatTran = new Device(uuid(), "Quạt trần", "Fan", true)
-                .addCaps(Device.CAP_POWER, Device.CAP_SPEED);
-        quatTran.setSpeed(2);
-        a_living.getDevices().add(quatTran);
+        Device device3 = new Device(UUID.randomUUID().toString(), "Quạt trần", "Phòng khách", "Fan", true, 100, "75W");
+        device3.setSpeed(2);
+        a_living.getDevices().add(device3);
 
-        Room a_bed = new Room(uuid(), "Phòng ngủ", icBed);
-        Device denNgu = new Device(uuid(), "Đèn ngủ", "Light", true)
-                .addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
-        denNgu.setBrightness(20);
-        denNgu.setColor(0xFFF2C179);
-        a_bed.getDevices().add(denNgu);
+        Room a_bed = new Room(UUID.randomUUID().toString(), "Phòng ngủ", R.drawable.ic_room_bed);
+        Device device4 = new Device(UUID.randomUUID().toString(), "Đèn ngủ", "Phòng ngủ", "Light", true, 20, "5W");
+        device4.setBrightness(20);
+        device4.setColor(0xFFF2C179);
+        a_bed.getDevices().add(device4);
 
-        Device quatHop = new Device(uuid(), "Quạt hộp", "Fan", false)
-                .addCaps(Device.CAP_POWER, Device.CAP_SPEED);
-        quatHop.setSpeed(1);
-        a_bed.getDevices().add(quatHop);
+        Device device5 = new Device(UUID.randomUUID().toString(), "Quạt hộp", "Phòng ngủ", "Fan", false, 0, "45W");
+        device5.setSpeed(1);
+        a_bed.getDevices().add(device5);
 
         houseA.getRooms().add(a_living);
         houseA.getRooms().add(a_bed);
 
-        // ---- House B ----
-        House houseB = new House(uuid(), "Biệt thự Q.7", R.drawable.home);
+        // -------- House B --------
+        House houseB = new House(UUID.randomUUID().toString(), "Biệt thự Q.7", R.drawable.home);
 
-        Room b_kitchen = new Room(uuid(), "Bếp", icKitchen);
-        Device denBep = new Device(uuid(), "Đèn bếp", "Light", true)
-                .addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
-        denBep.setBrightness(70);
-        denBep.setColor(0xFFF2C179);
-        b_kitchen.getDevices().add(denBep);
+        Room b_kitchen = new Room(UUID.randomUUID().toString(), "Bếp", R.drawable.ic_room_kitchen);
+        Device device6 = new Device(UUID.randomUUID().toString(), "Đèn bếp", "Bếp", "Light", true, 70, "15W");
+        device6.setBrightness(70);
+        device6.setColor(0xFFF2C179);
+        b_kitchen.getDevices().add(device6);
 
-        Device quatHut = new Device(uuid(), "Quạt hút", "Fan", true)
-                .addCaps(Device.CAP_POWER, Device.CAP_SPEED);
-        quatHut.setSpeed(3);
-        b_kitchen.getDevices().add(quatHut);
+        Device device7 = new Device(UUID.randomUUID().toString(), "Quạt hút", "Bếp", "Fan", true, 100, "30W");
+        device7.setSpeed(3);
+        b_kitchen.getDevices().add(device7);
 
-        Room b_office = new Room(uuid(), "Phòng làm việc", safeIcon(R.drawable.ic_room_generic, R.drawable.ic_room_generic));
-        Device denBan = new Device(uuid(), "Đèn bàn", "Light", true)
-                .addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
-        denBan.setBrightness(60);
-        denBan.setColor(0xFFFFFFFF);
-        b_office.getDevices().add(denBan);
+        Room b_office = new Room(UUID.randomUUID().toString(), "Phòng làm việc", R.drawable.ic_room_generic);
+        Device device8 = new Device(UUID.randomUUID().toString(), "Đèn bàn", "Phòng làm việc", "Light", true, 60, "10W");
+        device8.setBrightness(60);
+        device8.setColor(0xFFFFFFFF);
+        b_office.getDevices().add(device8);
 
-        Device denRGB = new Device(uuid(), "Đèn RGB", "Light", true)
-                .addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
-        denRGB.setBrightness(75);
-        denRGB.setColor(0xFF4F8CFF);
-        b_office.getDevices().add(denRGB);
+        Device device9 = new Device(UUID.randomUUID().toString(), "Đèn RGB", "Phòng làm việc", "Light", true, 75, "12W");
+        device9.setBrightness(75);
+        device9.setColor(0xFF4F8CFF);
+        b_office.getDevices().add(device9);
 
         houseB.getRooms().add(b_kitchen);
         houseB.getRooms().add(b_office);
 
         houses.put(houseA.getId(), houseA);
         houses.put(houseB.getId(), houseB);
-
-        // fill roomToHouse
-        for (House h : houses.values()) {
-            for (Room r : h.getRooms()) roomToHouse.put(r.getId(), h.getId());
-        }
     }
 
-    private static String uuid(){ return UUID.randomUUID().toString(); }
-
-    // Nếu icon A không tồn tại, fallback icon B để tránh crash
-    private static int safeIcon(int preferred, int fallback) { return preferred == 0 ? fallback : preferred; }
-
     /** Reseed để test lại nhanh (xoá & tạo lại dữ liệu demo) */
-    public void resetForDemo() { seed(); }
+    public void resetForDemo() {
+        seed();
+    }
 
     /* ====================== HOUSES ====================== */
     public List<House> getHouses() { return new ArrayList<>(houses.values()); }
     public House getHouseById(String houseId) { return houses.get(houseId); }
-
+    /** Thêm một nhà mới đơn giản (icon mặc định) */
     public House addHouse(String name) {
-        String id = uuid();
+        String id = UUID.randomUUID().toString();
         House h = new House(id, (name == null || name.trim().isEmpty()) ? "Nhà mới" : name.trim(), R.drawable.home);
         houses.put(id, h);
         return h;
     }
-
     public void updateHouse(String houseId, String name, String description) {
         House h = houses.get(houseId);
         if (h != null) {
@@ -190,40 +114,37 @@ public class SmartRepository {
             h.setDescription(description);
         }
     }
-
-    public boolean deleteHouse(String houseId) { return houses.remove(houseId) != null; }
+    public boolean deleteHouse(String houseId) {
+        return houses.remove(houseId) != null;
+    }
 
     /* ====================== ROOMS ====================== */
     public List<Room> getRooms(String houseId) {
         House h = houses.get(houseId);
         return h == null ? Collections.emptyList() : h.getRooms();
     }
-
     public Room getRoomById(String houseId, String roomId) {
         House h = houses.get(houseId);
         if (h == null) return null;
         for (Room r : h.getRooms()) if (r.getId().equals(roomId)) return r;
         return null;
     }
-
-    /** tất cả phòng của mọi nhà */
+    /** Tất cả phòng của mọi nhà (tiện cho AllRoomsActivity) */
     public List<Room> getAllRooms() {
         List<Room> res = new ArrayList<>();
         for (House h : houses.values()) res.addAll(h.getRooms());
         return res;
     }
-
+    /** Thêm phòng mới cho 1 nhà */
     public Room addRoom(String houseId, String name, int iconRes) {
         House h = houses.get(houseId);
         if (h == null) return null;
-        Room r = new Room(uuid(),
+        Room r = new Room(UUID.randomUUID().toString(),
                 (name == null || name.trim().isEmpty()) ? "Phòng mới" : name.trim(),
                 iconRes);
         h.getRooms().add(r);
-        roomToHouse.put(r.getId(), houseId);
         return r;
     }
-
     public void updateRoom(String houseId, String roomId, String name, String description) {
         Room r = getRoomById(houseId, roomId);
         if (r != null) {
@@ -231,32 +152,34 @@ public class SmartRepository {
             r.setDescription(description);
         }
     }
-
     public boolean deleteRoom(String houseId, String roomId) {
         House h = houses.get(houseId);
         if (h == null) return false;
         Iterator<Room> it = h.getRooms().iterator();
         while (it.hasNext()) {
             Room r = it.next();
-            if (r.getId().equals(roomId)) { it.remove(); roomToHouse.remove(roomId); return true; }
+            if (r.getId().equals(roomId)) { it.remove(); return true; }
         }
         return false;
     }
+
 
     // tiện tra houseId theo roomId (dùng cho MainActivitySR -> RoomDetails)
     public String getHouseIdByRoomId(String roomId) { return roomToHouse.get(roomId); }
 
     /* ====================== DEVICES (trong phòng) ====================== */
+
+    /* ====================== DEVICES ====================== */
     public void addDevice(String houseId, String roomId, Device d) {
         Room r = getRoomById(houseId, roomId);
         if (r != null) r.getDevices().add(d);
     }
-
+    /** Lấy danh sách thiết bị của 1 phòng */
     public List<Device> getDevicesOfRoom(String houseId, String roomId) {
         Room r = getRoomById(houseId, roomId);
         return (r == null) ? Collections.emptyList() : r.getDevices();
     }
-
+    /** Tất cả thiết bị của mọi nhà/phòng (tiện cho AllDevicesActivity) */
     public List<Device> getAllDevices() {
         List<Device> res = new ArrayList<>();
         for (House h : houses.values()) {

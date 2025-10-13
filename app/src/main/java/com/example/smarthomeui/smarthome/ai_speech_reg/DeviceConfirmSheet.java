@@ -76,9 +76,9 @@ public class DeviceConfirmSheet {
 
         // Icon gợi ý (đơn giản)
         if ("fan".equalsIgnoreCase(d.type)) {
-            imgDevice.setImageResource(R.drawable.ic_fan); // thêm icon của bạn
+            imgDevice.setImageResource(R.drawable.toys_fan_24px); // thêm icon của bạn
         } else {
-            imgDevice.setImageResource(R.drawable.ic_light);
+            imgDevice.setImageResource(R.drawable.lightbulb_24px);
         }
 
         // Cập nhật label nút "Xem tiếp"

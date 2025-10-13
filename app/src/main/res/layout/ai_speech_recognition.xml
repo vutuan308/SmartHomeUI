@@ -85,7 +85,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:contentDescription="Bắt đầu nghe"
-        app:srcCompat="@drawable/ic_plus"
+        app:srcCompat="@drawable/mic_24px"
         app:tint="@android:color/white"
         app:backgroundTint="@color/green"
         app:useCompatPadding="true"

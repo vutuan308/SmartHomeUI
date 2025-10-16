@@ -14,8 +14,16 @@ import androidx.fragment.app.FragmentManager;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.model.Device;
+import com.example.smarthomeui.smarthome.network.Api;
+import com.example.smarthomeui.smarthome.network.ApiClient;
+import com.example.smarthomeui.smarthome.network.DeviceControlRequest;
+import com.example.smarthomeui.smarthome.network.DeviceControlResponse;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class DeviceControlBottomSheet extends BottomSheetDialogFragment {
 
@@ -61,7 +69,7 @@ public class DeviceControlBottomSheet extends BottomSheetDialogFragment {
         View groupFan         = content.findViewById(R.id.groupFan);
         SeekBar seekBrightness= content.findViewById(R.id.seekBrightness);
         SeekBar seekSpeed     = content.findViewById(R.id.seekSpeed);
-        View btnPickColor     = content.findViewById(R.id.btnPickColor); // có thể là Button hoặc View tròn dùng làm preview
+        View btnPickColor     = content.findViewById(R.id.btnPickColor);
         View btnClose         = content.findViewById(R.id.btnClose);
 
         // Tiêu đề
@@ -74,48 +82,110 @@ public class DeviceControlBottomSheet extends BottomSheetDialogFragment {
             swPower.setOnCheckedChangeListener((b, checked) -> {
                 device.setOn(checked);
                 syncEnabledState(groupLight, groupFan, seekBrightness, seekSpeed, btnPickColor, checked);
+
+                // Send API command for power state based on device type
+                if ("Fan".equalsIgnoreCase(device.getType())) {
+                    sendDeviceControlCommand("setFanStatus", checked ? 1 : 0);
+                } else if ("RGBLight".equalsIgnoreCase(device.getType())) {
+                    if (!checked) {
+                        // Turn off RGBLight by setting RGB to 0,0,0
+                        sendDeviceControlCommand("setRgbColor", "{\"r\":0,\"g\":0,\"b\":0}");
+                    } else {
+                        // Turn on RGBLight by setting to current color
+                        int color = device.getColor();
+                        int r = (color >> 16) & 0xFF;
+                        int g = (color >> 8) & 0xFF;
+                        int blue = color & 0xFF;
+                        sendDeviceControlCommand("setRgbColor", "{\"r\":" + r + ",\"g\":" + g + ",\"b\":" + blue + "}");
+                    }
+                } else {
+                    // For Light
+                    sendDeviceControlCommand("setLedStatus", checked ? 1 : 0);
+                }
+
                 fireChanged();
             });
         }
 
-        // LIGHT
-        if (device.isLight()) {
+        // Phân loại theo type
+        String deviceType = device.getType();
+        boolean isLight = "Light".equalsIgnoreCase(deviceType);
+        boolean isLightRGB = "RGBLight".equalsIgnoreCase(deviceType);
+        boolean isFan = "Fan".equalsIgnoreCase(deviceType);
+
+        // LIGHT hoặc LIGHT_RGB
+        if (isLight || isLightRGB) {
             if (groupLight != null) groupLight.setVisibility(View.VISIBLE);
+            if (groupFan != null) groupFan.setVisibility(View.GONE);
+
+            // Brightness control (cho cả Light và LightRGB)
             if (seekBrightness != null) {
                 seekBrightness.setMax(100);
                 seekBrightness.setOnSeekBarChangeListener(null);
                 seekBrightness.setProgress(device.getBrightness());
                 seekBrightness.setOnSeekBarChangeListener(new SimpleSeek(p -> {
                     device.setBrightness(p);
+
+                    // Convert brightness from 0-100 to 0-255 for API
+                    int dimValue = (int) ((p / 100.0) * 255);
+                    sendDeviceControlCommand("setLedDim", dimValue);
+
                     fireChanged();
                 }));
             }
-            if (btnPickColor != null) {
-                // tô preview theo màu hiện tại nếu là View
-                try { btnPickColor.getBackground().setTint(device.getColor()); } catch (Exception ignore) {}
-                btnPickColor.setOnClickListener(v ->
-                        AdvancedColorPickerDialog.newInstance(device.getColor(), picked -> {
-                            device.setColor(picked);
-                            try { btnPickColor.getBackground().setTint(picked); } catch (Exception ignore) {}
-                            fireChanged();
-                        }).show(getParentFragmentManagerSafe(), "adv_color_picker")
-                );
-            }
-        } else if (groupLight != null) groupLight.setVisibility(View.GONE);
 
+            // Color picker (CHỈ cho LightRGB)
+            if (btnPickColor != null) {
+                if (isLightRGB) {
+                    btnPickColor.setVisibility(View.VISIBLE);
+                    // Tô preview theo màu hiện tại
+                    try { btnPickColor.getBackground().setTint(device.getColor()); } catch (Exception ignore) {}
+                    btnPickColor.setOnClickListener(v ->
+                            AdvancedColorPickerDialog.newInstance(device.getColor(), picked -> {
+                                device.setColor(picked);
+                                try { btnPickColor.getBackground().setTint(picked); } catch (Exception ignore) {}
+
+                                // Send RGB color command for RGBLight
+                                int r = (picked >> 16) & 0xFF;
+                                int g = (picked >> 8) & 0xFF;
+                                int blue = picked & 0xFF;
+                                sendDeviceControlCommand("setRgbColor", "{\"r\":" + r + ",\"g\":" + g + ",\"b\":" + blue + "}");
+
+                                fireChanged();
+                            }).show(getParentFragmentManagerSafe(), "adv_color_picker")
+                    );
+                } else {
+                    // Light thông thường: ẨN nút chọn màu
+                    btnPickColor.setVisibility(View.GONE);
+                }
+            }
+        }
         // FAN
-        if (device.isFan()) {
+        else if (isFan) {
+            if (groupLight != null) groupLight.setVisibility(View.GONE);
             if (groupFan != null) groupFan.setVisibility(View.VISIBLE);
+
             if (seekSpeed != null) {
                 seekSpeed.setMax(3);
                 seekSpeed.setOnSeekBarChangeListener(null);
                 seekSpeed.setProgress(device.getSpeed());
                 seekSpeed.setOnSeekBarChangeListener(new SimpleSeek(p -> {
                     device.setSpeed(p);
+
+                    // Convert speed from 0-3 to percentage (0-100)
+                    // Speed 0 = 0%, Speed 1 = 33%, Speed 2 = 66%, Speed 3 = 100%
+                    int speedPercentage = (int) ((p / 3.0) * 100);
+                    sendDeviceControlCommand("setFanSpeed", "{\"speed\":" + speedPercentage + "}");
+
                     fireChanged();
                 }));
             }
-        } else if (groupFan != null) groupFan.setVisibility(View.GONE);
+        }
+        // Loại khác (ẩn tất cả controls)
+        else {
+            if (groupLight != null) groupLight.setVisibility(View.GONE);
+            if (groupFan != null) groupFan.setVisibility(View.GONE);
+        }
 
         // Khóa / mở controls theo power ban đầu
         syncEnabledState(groupLight, groupFan, seekBrightness, seekSpeed, btnPickColor, device.isOn());
@@ -124,6 +194,78 @@ public class DeviceControlBottomSheet extends BottomSheetDialogFragment {
         if (btnClose != null) btnClose.setOnClickListener(v -> dismiss());
 
         return dialog;
+    }
+
+    /**
+     * Send device control command to API
+     * @param method The command method (e.g., "setLedStatus", "setLedDim")
+     * @param params The command parameter value
+     */
+    private void sendDeviceControlCommand(String method, Object params) {
+        if (device == null || device.getId() == null) {
+            android.util.Log.e("DeviceControl", "Device or Device ID is null");
+            return;
+        }
+
+        // Get device ID as String (supports UUID format)
+        String deviceId = device.getId();
+
+        // Build JSON command string
+        String jsonCommand = "{\"method\":\"" + method + "\",\"params\":" + params + "}";
+
+        // ===== LOG JSON COMMAND =====
+        android.util.Log.d("DeviceControl", "==================== DEVICE CONTROL ====================");
+        android.util.Log.d("DeviceControl", "Device ID: " + deviceId);
+        android.util.Log.d("DeviceControl", "Device Name: " + device.getName());
+        android.util.Log.d("DeviceControl", "JSON Command: " + jsonCommand);
+        android.util.Log.d("DeviceControl", "=======================================================");
+
+        // Create API request with JSON string
+        DeviceControlRequest request = new DeviceControlRequest(jsonCommand);
+
+        Api api = ApiClient.getClient(getContext()).create(Api.class);
+        Call<DeviceControlResponse> call = api.controlDevice(deviceId, request);
+
+        call.enqueue(new Callback<DeviceControlResponse>() {
+            @Override
+            public void onResponse(Call<DeviceControlResponse> call, Response<DeviceControlResponse> response) {
+                android.util.Log.d("DeviceControl", "==================== RESPONSE ====================");
+                android.util.Log.d("DeviceControl", "Response Code: " + response.code());
+                android.util.Log.d("DeviceControl", "Response Message: " + response.message());
+
+                if (response.isSuccessful() && response.body() != null) {
+                    DeviceControlResponse controlResponse = response.body();
+                    android.util.Log.d("DeviceControl", "Success: " + controlResponse.isSuccess());
+                    android.util.Log.d("DeviceControl", "Message: " + controlResponse.getMessage());
+
+                    if (controlResponse.isSuccess()) {
+                        android.util.Log.d("DeviceControl", "✓ Command sent successfully");
+                    } else {
+                        String errorMsg = controlResponse.getMessage() != null
+                                ? controlResponse.getMessage()
+                                : "Command failed";
+                        android.util.Log.e("DeviceControl", "✗ Command failed: " + errorMsg);
+                    }
+                } else {
+                    try {
+                        String errorBody = response.errorBody() != null
+                                ? response.errorBody().string()
+                                : "No error body";
+                        android.util.Log.e("DeviceControl", "✗ Error Body: " + errorBody);
+                    } catch (Exception e) {
+                        android.util.Log.e("DeviceControl", "Error reading error body", e);
+                    }
+                }
+                android.util.Log.d("DeviceControl", "==================================================");
+            }
+
+            @Override
+            public void onFailure(Call<DeviceControlResponse> call, Throwable t) {
+                android.util.Log.e("DeviceControl", "==================== FAILURE ====================");
+                android.util.Log.e("DeviceControl", "✗ Network error: " + t.getMessage(), t);
+                android.util.Log.e("DeviceControl", "=================================================");
+            }
+        });
     }
 
     private void syncEnabledState(@Nullable View groupLight, @Nullable View groupFan,

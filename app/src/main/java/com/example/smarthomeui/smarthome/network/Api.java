@@ -56,9 +56,23 @@ public interface Api {
     // Xóa phòng
     @DELETE("/api/room/{id}")
     Call<Void> deleteRoom(@Path("id") int id);
+
+    // Lấy chi tiết phòng
+    @GET("/api/room/{id}")
+    Call<RoomDto> getRoomById(@Path("id") int id);
+
     // ===== DEVICE =====
     // Danh sách thiết bị theo user (có phân trang)
     @GET("/api/device")
     Call<DeviceListWrap> getDevices(@Query("skip") int skip,
                                     @Query("take") int take);
+
+    // Danh sách thiết bị theo phòng
+    @GET("/api/room/{roomId}/devices")
+    Call<DeviceListWrap> getDevicesByRoomId(@Path("roomId") int roomId);
+
+    // Điều khiển thiết bị
+    @POST("/api/device/{id}/control")
+    Call<DeviceControlResponse> controlDevice(@Path("id") String deviceId,
+                                              @Body DeviceControlRequest request);
 }

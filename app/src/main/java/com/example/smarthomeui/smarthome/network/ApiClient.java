@@ -8,12 +8,13 @@ import com.google.gson.GsonBuilder;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
     // NHỚ có dấu / cuối
-    private static final String BASE_URL = "https://4e88288326ea.ngrok-free.app/";
+    private static final String BASE_URL = "https://2ba008fc64f9.ngrok-free.app/";
 
     private static Retrofit authedRetrofit;
     private static Retrofit noAuthRetrofit;
@@ -47,7 +48,14 @@ public class ApiClient {
     /** Retrofit CÓ auth: tự gắn Bearer token từ UserManager */
     public static Retrofit getClient(Context ctx) {
         if (authedRetrofit == null) {
+            // Thêm logging interceptor để xem request/response
+            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(message -> {
+                android.util.Log.d("API_LOG", message);
+            });
+            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+
             OkHttpClient client = new OkHttpClient.Builder()
+                    .addInterceptor(loggingInterceptor) // Thêm logger
                     .addInterceptor((Interceptor) chain -> {
                         Request req = chain.request();
                         String token = new com.example.smarthomeui.smarthome.utils.UserManager(

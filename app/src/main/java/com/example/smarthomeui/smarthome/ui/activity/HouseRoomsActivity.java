@@ -15,14 +15,11 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.adapter.RoomAdapter;
-import com.example.smarthomeui.smarthome.data.SmartRepository;
-import com.example.smarthomeui.smarthome.model.House;
 import com.example.smarthomeui.smarthome.model.Room;
 import com.example.smarthomeui.smarthome.network.Api;
 import com.example.smarthomeui.smarthome.network.ApiClient;

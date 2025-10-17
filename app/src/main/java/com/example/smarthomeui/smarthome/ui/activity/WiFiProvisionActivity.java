@@ -16,7 +16,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.smarthomeui.R;
-import com.example.smarthomeui.smarthome.data.SmartRepository;
 import com.example.smarthomeui.smarthome.model.Device;
 import com.example.smarthomeui.smarthome.provision.ProvisionSession;
 import com.espressif.provisioning.ESPDevice;
@@ -24,11 +23,9 @@ import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.WiFiAccessPoint;
 import com.espressif.provisioning.listeners.ProvisionListener;
 import com.espressif.provisioning.listeners.WiFiScanListener;
-import com.espressif.provisioning.ESPProvisionManager;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 public class WiFiProvisionActivity extends AppCompatActivity {
@@ -186,7 +183,7 @@ public class WiFiProvisionActivity extends AppCompatActivity {
                         newDevice.addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
                         newDevice.setBrightness(100);
                         newDevice.setColor(0xFFFFFFFF);
-                        SmartRepository.get(WiFiProvisionActivity.this).addToInventory(newDevice);
+
 
                         if (dismissOnSuccess != null) dismissOnSuccess.dismiss();
 

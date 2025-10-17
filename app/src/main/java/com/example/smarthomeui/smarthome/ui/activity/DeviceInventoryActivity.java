@@ -27,7 +27,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.adapter.DeviceInventoryAdapter;
 import com.example.smarthomeui.smarthome.components.DeviceControlBottomSheet;
-import com.example.smarthomeui.smarthome.data.SmartRepository;
 import com.example.smarthomeui.smarthome.model.Device;
 import com.example.smarthomeui.smarthome.provision.ProvisionSession;
 
@@ -109,7 +108,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         RecyclerView rv = findViewById(R.id.rvInventory);
         rv.setLayoutManager(new LinearLayoutManager(this));
 
-        inventory.addAll(SmartRepository.get(this).getInventory());
+
         adapter = new DeviceInventoryAdapter(inventory, new DeviceInventoryAdapter.OnItemAction() {
             @Override public void onControl(Device d, int pos) {
                 // dùng lại bottom sheet điều khiển theo capabilities (tuỳ chọn)
@@ -121,7 +120,6 @@ public class DeviceInventoryActivity extends AppCompatActivity {
                 // (phần gán này bạn bảo khi nào cần mình gửi thêm)
             }
             @Override public void onDelete(Device d, int pos) {
-                SmartRepository.get(DeviceInventoryActivity.this).removeFromInventory(d.getId());
                 inventory.remove(pos);
                 adapter.notifyItemRemoved(pos);
             }
@@ -142,7 +140,6 @@ public class DeviceInventoryActivity extends AppCompatActivity {
 
     private void refreshInventory() {
         inventory.clear();
-        inventory.addAll(SmartRepository.get(this).getInventory());
         adapter.notifyDataSetChanged();
     }
 
@@ -174,7 +171,6 @@ public class DeviceInventoryActivity extends AppCompatActivity {
 
                             if (!exists) {
                                 // Thêm vào local repository và UI
-                                SmartRepository.get(DeviceInventoryActivity.this).addToInventory(device);
                                 inventory.add(device);
                             }
                         }
@@ -205,7 +201,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
     }
 
     private Device convertApiDeviceToDevice(DeviceDto deviceDto) {
-        String deviceId = UUID.randomUUID().toString();
+        String deviceId = String.valueOf(deviceDto.getId());
         String name = deviceDto.getName();
         String type = deviceDto.getType();
 
@@ -531,7 +527,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
                         newDevice.addCaps(CAP_POWER, CAP_BRIGHTNESS, CAP_COLOR);
                         newDevice.setBrightness(100);
                         newDevice.setColor(0xFFFFFFFF);
-                        SmartRepository.get(DeviceInventoryActivity.this).addToInventory(newDevice);
+
                         inventory.add(newDevice);
                         adapter.notifyItemInserted(inventory.size() - 1);
                         if (dialogToDismiss != null) dialogToDismiss.dismiss();
@@ -589,7 +585,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
                 dev.setColor(0xFFFFFFFF);
             }
 
-            SmartRepository.get(this).addToInventory(dev);
+
             inventory.add(dev);
             adapter.notifyItemInserted(inventory.size()-1);
             dialog.dismiss();

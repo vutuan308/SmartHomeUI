@@ -14,7 +14,6 @@ public class Device implements Serializable {
     public static final String CAP_COLOR        = "color";
     public static final String CAP_SPEED        = "speed";
     public static final String CAP_TEMPERATURE  = "temperature";
-
     private String id;
     private String name;
     private String type;     // "Light", "Fan", "AC", "Outlet", ...
@@ -56,6 +55,9 @@ public class Device implements Serializable {
         this.on = online;
         this.value = value;
         this.powerConsumption = powerConsumption;
+
+        // Log để verify ID ngay khi tạo object
+        android.util.Log.d("Device", "Created Device - ID: " + id + ", Name: " + name);
     }
 
     // ======= GET/SET cơ bản =======

@@ -1,20 +1,22 @@
 package com.example.smarthomeui.smarthome.ai_speech_reg;
 
-import com.example.smarthomeui.R;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.example.smarthomeui.R;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import java.util.List;
+import com.example.smarthomeui.smarthome.model.Device;
 import static com.example.smarthomeui.smarthome.ai_speech_reg.DeviceModels.*;
 
 public class DeviceConfirmSheet {
 
     public interface Callback {
-        void onConfirmed(DeviceModels.Device device, ParseResult planned);
+        void onConfirmed(Device device, ParseResult planned);
         void onCanceled();
     }
 
@@ -26,16 +28,12 @@ public class DeviceConfirmSheet {
     private final List<DeviceRegistry.CandidateResult> candidates;
     private int index = 0;
     private final ParseResult planned;
-    private final Context ctx;
 
     public DeviceConfirmSheet(Context ctx,
                               List<DeviceRegistry.CandidateResult> candidates,
                               ParseResult planned,
                               Callback cb) {
-        this.ctx = ctx;
-        this.candidates = candidates;
-        this.planned = planned;
-        this.dialog = new BottomSheetDialog(ctx);
+        dialog = new BottomSheetDialog(ctx);
         View v = LayoutInflater.from(ctx).inflate(R.layout.sheet_device_confirm, null, false);
         dialog.setContentView(v);
 
@@ -47,10 +45,13 @@ public class DeviceConfirmSheet {
         btnNext = v.findViewById(R.id.btnNext);
         btnConfirm = v.findViewById(R.id.btnConfirm);
 
+        this.candidates = candidates;
+        this.planned = planned;
+
         btnCancel.setOnClickListener(view -> { dialog.dismiss(); cb.onCanceled(); });
         btnNext.setOnClickListener(view -> { nextCandidate(); });
         btnConfirm.setOnClickListener(view -> {
-            DeviceModels.Device d = candidates.get(index).device;
+            Device d = candidates.get(index).device;
             dialog.dismiss();
             cb.onConfirmed(d, planned);
         });
@@ -59,29 +60,25 @@ public class DeviceConfirmSheet {
     }
 
     private void bindCandidate() {
-        DeviceModels.Device d = candidates.get(index).device;
-        tvDeviceName.setText(d.name);
-        tvRoomType.setText(d.room + " • " + d.type);
+        Device d = candidates.get(index).device;
+        tvDeviceName.setText(d.getName());
+        tvRoomType.setText(d.getRoom() + " • " + d.getType());
 
         String actionStr;
         switch (planned.action) {
             case TURN_ON: actionStr = "Hành động: BẬT"; break;
             case TURN_OFF: actionStr = "Hành động: TẮT"; break;
-            case INCREASE: actionStr = "Hành động: TĂNG" + (planned.value!=null?(" lên "+planned.value):""); break;
-            case DECREASE: actionStr = "Hành động: GIẢM" + (planned.value!=null?(" xuống "+planned.value):""); break;
-            case SET: actionStr = "Hành động: ĐẶT" + (planned.value!=null?(" = "+planned.value):""); break;
+            case INCREASE: actionStr = "Hành động: TĂNG" + (planned.value!=null&&planned.value>=0?(" lên "+planned.value):""); break;
+            case DECREASE: actionStr = "Hành động: GIẢM" + (planned.value!=null&&planned.value>=0?(" xuống "+planned.value):""); break;
+            case SET: actionStr = "Hành động: ĐẶT" + (planned.value!=null&&planned.value>=0?(" = "+planned.value):""); break;
             default: actionStr = "Hành động: (không rõ)";
         }
         tvPlannedAction.setText(actionStr);
 
-        // Icon gợi ý (đơn giản)
-        if ("fan".equalsIgnoreCase(d.type)) {
-            imgDevice.setImageResource(R.drawable.toys_fan_24px); // thêm icon của bạn
-        } else {
-            imgDevice.setImageResource(R.drawable.lightbulb_24px);
-        }
+        // Icon gợi ý (tương thích Device.java có isLight()/isFan())
+        if (d.isFan())      imgDevice.setImageResource(R.drawable.toys_fan_24px);
+        else                imgDevice.setImageResource(R.drawable.lightbulb_24px);
 
-        // Cập nhật label nút "Xem tiếp"
         if (candidates.size() <= 1) btnNext.setVisibility(View.GONE);
         else btnNext.setText("Không phải, xem tiếp (" + (index+1) + "/" + candidates.size() + ")");
     }
@@ -93,4 +90,3 @@ public class DeviceConfirmSheet {
 
     public void show() { dialog.show(); }
 }
-

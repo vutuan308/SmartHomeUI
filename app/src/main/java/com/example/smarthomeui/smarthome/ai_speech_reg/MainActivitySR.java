@@ -1,26 +1,25 @@
 package com.example.smarthomeui.smarthome.ai_speech_reg;
 
-import static com.example.smarthomeui.smarthome.ai_speech_reg.DeviceModels.*;
-import com.example.smarthomeui.R;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+
+import com.example.smarthomeui.smarthome.model.Device;
+import com.example.smarthomeui.smarthome.ai_speech_reg.DeviceModels.ParseResult;
+
+import com.example.smarthomeui.R;
+import com.example.smarthomeui.smarthome.model.Device;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,7 +75,7 @@ public class MainActivitySR extends AppCompatActivity {
             @Override public void onRmsChanged(float rmsdB) {}
             @Override public void onBufferReceived(byte[] buffer) {}
             @Override public void onEndOfSpeech() {}
-            @Override public void onError(int error) { tvHeard.setText("Lỗi ghi âm: " + error); }
+            @Override public void onError(int error) { tvHeard.setText("Mic đang bận"); }
             @Override public void onPartialResults(Bundle partialResults) {
                 ArrayList<String> list = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (list != null && !list.isEmpty()) {
@@ -104,54 +103,42 @@ public class MainActivitySR extends AppCompatActivity {
     }
 
     private void emitParse(String text) {
-        DeviceModels.ParseResult r = parser.parse(text);
-        tvHeard.setText(text); // phần trên: "Người dùng nói"
+        ParseResult r = parser.parse(text);
 
-        // Trường hợp hoàn toàn không liên quan hoặc không nghe được
+        // Không liên quan / không nghe được
         boolean unrelated = !r.isDeviceKnown() && !r.isActionKnown() && !r.isValueKnown() && !r.isRoomKnown();
         if (unrelated) {
             tvResult.setText("Không biết hoặc không thể nghe. Vui lòng nói lại rõ hơn.");
             return;
         }
 
-        // Không tìm thấy thiết bị phù hợp (không mở sheet)
+        // Không tìm thấy thiết bị
         if (!r.isDeviceKnown()) {
             tvResult.setText("Không biết hoặc không tìm thấy thiết bị phù hợp.");
             return;
         }
 
-        // Có thiết bị → mở sheet xác nhận như trước
-        List<DeviceRegistry.CandidateResult> cands = registry.rankCandidates(text,
-                r.isRoomKnown() ? r.room : null, 5);
+        // Có thiết bị → hiển thị sheet xác nhận
+        List<DeviceRegistry.CandidateResult> cands = registry.rankCandidates(
+                text, r.isRoomKnown()? r.room : null, 5);
 
         if (cands.isEmpty()) {
             tvResult.setText("Không biết hoặc không tìm thấy thiết bị phù hợp.");
             return;
         }
 
-        // Cập nhật planned device từ ứng viên đầu tiên tạm thời (chỉ để hiển thị)
-        r.deviceId = cands.get(0).device.id;
-        r.deviceName = cands.get(0).device.name;
-        if (r.room == null) r.room = cands.get(0).device.room;
-
-        // Hiển thị bottom sheet xác nhận
         DeviceConfirmSheet sheet = new DeviceConfirmSheet(
                 this, cands, r,
                 new DeviceConfirmSheet.Callback() {
                     @Override
-                    public void onConfirmed(DeviceModels.Device d, DeviceModels.ParseResult planned) {
-                        // Gắn lại đúng device đã xác nhận
-                        planned.deviceId = d.id;
-                        planned.deviceName = d.name;
-                        if (planned.room == null) planned.room = d.room;
-                        // (Chưa có API) -> log/hiển thị
-                        String line = planned.toString();
-                        tvResult.setText("XÁC NHẬN! " + line);
-                        android.widget.Toast.makeText(MainActivitySR.this,
-                                "Thực hiện: " + line, android.widget.Toast.LENGTH_SHORT).show();
+                    public void onConfirmed(Device d, ParseResult planned) {
+                        planned.deviceId = d.getId();
+                        planned.deviceName = d.getName();
+                        if (!planned.isRoomKnown()) planned.room = d.getRoom();
 
-                        // TODO: Sau này gọi API điều khiển tại đây
-                        // callControlApi(planned);
+                        // Chưa có API → hiển thị phần “Phản hồi hệ thống”
+                        tvResult.setText("ĐÃ XÁC NHẬN: " + planned.toString());
+                        // TODO: Khi có API: map action/value và gọi endpoint điều khiển tại đây.
                     }
                     @Override public void onCanceled() {
                         tvResult.setText("Bạn đã huỷ.");
@@ -159,9 +146,6 @@ public class MainActivitySR extends AppCompatActivity {
                 }
         );
         sheet.show();
-
-        // Hiện câu đã nghe
-        tvHeard.setText("Bạn nói: " + text);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.example.smarthomeui.smarthome.ai_speech_reg;
 
+import com.example.smarthomeui.smarthome.model.Device;
 import java.util.*;
 import java.util.regex.*;
 import static com.example.smarthomeui.smarthome.ai_speech_reg.DeviceModels.*;
@@ -8,12 +9,10 @@ import static com.example.smarthomeui.smarthome.ai_speech_reg.StringUtilsVN.fold
 public class VietnameseCommandParser {
 
     private final DeviceRegistry registry;
-    private static final int MIN_DEVICE_SCORE = 6;
-    public VietnameseCommandParser(DeviceRegistry registry) {
-        this.registry = registry;
-    }
+    private static final int MIN_DEVICE_SCORE = 6; // <6 → xem như không liên quan
 
-    // map số viết chữ phổ biến -> int
+    public VietnameseCommandParser(DeviceRegistry registry) { this.registry = registry; }
+
     private static final Map<String,Integer> NUMBER_WORDS = new HashMap<>();
     static {
         String[][] pairs = {
@@ -30,18 +29,14 @@ public class VietnameseCommandParser {
         out.raw = raw;
 
         String f = fold(raw);
-        if (f == null || f.trim().isEmpty()) {
-            // Không thể nghe
-            return out; // giữ UNKNOWN/-1 theo mặc định
-        }
+        if (f.isEmpty()) return out; // giữ UNKNOWN/-1
 
         // 1) Action
-        if (f.matches(".*\\b(bat|mo|bật|mở)\\b.*")) out.action = Action.TURN_ON;
-        else if (f.matches(".*\\b(tat|dong|tắt|đóng)\\b.*")) out.action = Action.TURN_OFF;
-        else if (f.matches(".*\\b(tang|tăng|len|lên)\\b.*")) out.action = Action.INCREASE;
-        else if (f.matches(".*\\b(giam|giảm|xuong|xuống)\\b.*")) out.action = Action.DECREASE;
+        if (f.matches(".*\\b(bat|mo|bật|mở|turn on)\\b.*")) out.action = Action.TURN_ON;
+        else if (f.matches(".*\\b(tat|dong|tắt|đóng|turn off)\\b.*")) out.action = Action.TURN_OFF;
+        else if (f.matches(".*\\b(tang|tăng|len|lên|up|increase)\\b.*")) out.action = Action.INCREASE;
+        else if (f.matches(".*\\b(giam|giảm|xuong|xuống|down|decrease)\\b.*")) out.action = Action.DECREASE;
         else if (f.matches(".*\\b(dat|đặt|set)\\b.*")) out.action = Action.SET;
-        else out.action = Action.UNKNOWN;
 
         // 2) Value
         Integer value = extractValue(f);
@@ -51,53 +46,42 @@ public class VietnameseCommandParser {
         String room = extractRoom(f);
         out.room = (room != null) ? room : "UNKNOWN";
 
-        // 4) ĐÁNH GIÁ LIÊN QUAN TỚI THIẾT BỊ
-        int topScore = registry.estimateTopScore(f, room);
+        // 4) Đánh giá liên quan thiết bị
+        int topScore = registry.estimateTopScore(f, out.isRoomKnown()? out.room : null);
         if (topScore < MIN_DEVICE_SCORE) {
-            // Câu nói không liên quan/không đủ tự tin → KHÔNG tra cứu thiết bị
-            // Giữ deviceId=-1, deviceName="UNKNOWN"
+            // Không liên quan: giữ device UNKNOWN/-1
             return out;
         }
 
-        // 5) Nếu đủ tự tin mới tra cứu ứng viên & gán device
-        List<DeviceRegistry.CandidateResult> cands = registry.rankCandidates(f, room, 1);
+        // 5) Ứng viên tốt nhất
+        List<DeviceRegistry.CandidateResult> cands =
+                registry.rankCandidates(f, out.isRoomKnown()? out.room : null, 1);
         if (!cands.isEmpty()) {
             Device d = cands.get(0).device;
-            out.deviceId = d.id;
-            out.deviceName = d.name;
-            if ("UNKNOWN".equals(out.room)) out.room = d.room;
+            out.deviceId = d.getId();
+            out.deviceName = d.getName();
+            if (!out.isRoomKnown()) out.room = d.getRoom();
         }
         return out;
     }
 
     private Integer extractValue(String f) {
-        // “mức 3”, “lên mức 2”, “về 70%”, “70 phan tram”, “tăng 1 mức”
-        Pattern p1 = Pattern.compile("\\bmuc\\s+(\\d+)\\b");
-        Matcher m1 = p1.matcher(f);
+        Matcher m1 = Pattern.compile("\\bmuc|cap|level\\s+(\\d+)\\b").matcher(f);
         if (m1.find()) return Integer.parseInt(m1.group(1));
-
-        Pattern p2 = Pattern.compile("\\b(\\d{1,3})\\s*%"); // 0..100%
-        Matcher m2 = p2.matcher(f);
+        Matcher m2 = Pattern.compile("\\b(\\d{1,3})\\s*%").matcher(f);
         if (m2.find()) return Integer.parseInt(m2.group(1));
-
-        Pattern p3 = Pattern.compile("\\b(\\d{1,2})\\b");   // số rời
-        Matcher m3 = p3.matcher(f);
+        Matcher m3 = Pattern.compile("\\b(\\d{1,2})\\b").matcher(f);
         if (m3.find()) return Integer.parseInt(m3.group(1));
-
-        // từ số “một/hai/ba…”
-        for (Map.Entry<String,Integer> e : NUMBER_WORDS.entrySet()) {
+        for (Map.Entry<String,Integer> e : NUMBER_WORDS.entrySet())
             if (f.contains(e.getKey())) return e.getValue();
-        }
         return null;
     }
 
     private String extractRoom(String f) {
-        // đơn giản: tìm “phong …”
-        Pattern pr = Pattern.compile("\\bphong\\s+(ngu|khach|bep|lam viec|hoc|tam|wc)\\b");
-        Matcher mr = pr.matcher(f);
+        Matcher mr = Pattern.compile("\\bphong|room\\s+(ngu|bedroom|khach|livingroom" +
+                "|bep|kitchen|lam viec|hoc|tam|bathroom|wc)\\b").matcher(f);
         if (mr.find()) {
-            String token = mr.group(1);
-            switch (token) {
+            switch (mr.group(1)) {
                 case "ngu": return "phòng ngủ";
                 case "khach": return "phòng khách";
                 case "bep": return "phòng bếp";
@@ -105,22 +89,6 @@ public class VietnameseCommandParser {
                 case "hoc": return "phòng học";
                 case "tam": return "phòng tắm";
                 case "wc": return "phòng vệ sinh";
-            }
-        }
-        return null;
-    }
-
-    private String extractDevicePhrase(String f) {
-        // Nhận diện nhanh vài loại phổ biến; có thể mở rộng danh sách từ khoá
-        String[] heads = {"den", "quat", "may lanh", "rem", "cua", "o cam", "tivi"};
-        for (String h : heads) {
-            int idx = f.indexOf(h);
-            if (idx >= 0) {
-                // lấy chuỗi từ h đến hết/đến “phong …”
-                String tail = f.substring(idx);
-                int cut = tail.indexOf("phong ");
-                String phrase = (cut > 0 ? tail.substring(0, cut) : tail);
-                return phrase.trim();
             }
         }
         return null;

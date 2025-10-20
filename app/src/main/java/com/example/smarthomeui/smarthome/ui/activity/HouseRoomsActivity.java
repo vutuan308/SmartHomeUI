@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.adapter.RoomAdapter;
+import com.example.smarthomeui.smarthome.ai_speech_reg.MainActivitySR;
 import com.example.smarthomeui.smarthome.model.Room;
 import com.example.smarthomeui.smarthome.network.Api;
 import com.example.smarthomeui.smarthome.network.ApiClient;
@@ -113,6 +114,8 @@ public class HouseRoomsActivity extends BaseActivity {
                 startActivity(new Intent(this, DeviceInventoryActivity.class)));
         findViewById(R.id.ivRooms).setOnClickListener(v ->
                 startActivity(new Intent(this, AllRoomsActivity.class)));
+        findViewById(R.id.ivPlus).setOnClickListener(v ->
+                startActivity(new Intent(this, MainActivitySR.class)));
         findViewById(R.id.ivHome).setOnClickListener(v ->
                 startActivity(new Intent(this, HouseListActivity.class)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)));

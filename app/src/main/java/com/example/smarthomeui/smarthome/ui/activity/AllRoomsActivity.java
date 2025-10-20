@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
+import com.example.smarthomeui.smarthome.ai_speech_reg.MainActivitySR;
 import com.example.smarthomeui.smarthome.model.Room;
 import com.example.smarthomeui.smarthome.network.*;
 
@@ -70,6 +71,11 @@ public class AllRoomsActivity extends AppCompatActivity {
         View ivDevices = findViewById(R.id.ivDevices);
         if (ivDevices != null) ivDevices.setOnClickListener(v ->
                 startActivity(new Intent(this, DeviceInventoryActivity.class)));
+
+       ImageView ivPlus = findViewById(R.id.ivPlus);
+        if (ivPlus != null) ivPlus.setOnClickListener(v ->
+                startActivity(new Intent(this, MainActivitySR.class)));
+
         View ivSetting = findViewById(R.id.ivSetting);
         if (ivSetting != null) ivSetting.setOnClickListener(v ->
                 startActivity(new Intent(this, SettingsActivity.class)));

@@ -1,5 +1,6 @@
 package com.example.smarthomeui.smarthome.ui.activity;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -26,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.adapter.DeviceInventoryAdapter;
+import com.example.smarthomeui.smarthome.ai_speech_reg.MainActivitySR;
 import com.example.smarthomeui.smarthome.components.DeviceControlBottomSheet;
 import com.example.smarthomeui.smarthome.model.Device;
 import com.example.smarthomeui.smarthome.provision.ProvisionSession;
@@ -84,6 +86,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("MissingInflatedId")
     @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_inventory);
@@ -93,13 +96,15 @@ public class DeviceInventoryActivity extends AppCompatActivity {
                 startActivity(new Intent(this, HouseListActivity.class)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)));
 
+        findViewById(R.id.ivControl).setOnClickListener(v ->
+                startActivity(new Intent(this, MainActivitySR.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)));
+
         findViewById(R.id.ivRooms).setOnClickListener(v ->
                 startActivity(new Intent(this, AllRoomsActivity.class)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)));
 
         // Plus ở giữa: mở dialog thêm thiết bị vào KHO (không gán phòng)
-        findViewById(R.id.ivPlus).setOnClickListener(v -> openAddToInventoryDialog());
-
         findViewById(R.id.ivSetting).setOnClickListener(v ->
                 startActivity(new Intent(this, SettingsActivity.class)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)));

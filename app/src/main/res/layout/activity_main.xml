@@ -112,7 +112,7 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_centerInParent="true"
-                        android:background="@drawable/home"
+                        android:background="@drawable/home_20px"
                         android:contentDescription="@string/app_name" />
                 </RelativeLayout>
 
@@ -135,7 +135,7 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_centerInParent="true"
-                        android:background="@drawable/room"
+                        android:background="@drawable/door_open_24px"
                         android:contentDescription="@string/app_name" />
                 </RelativeLayout>
             </LinearLayout>
@@ -150,10 +150,9 @@
                 <!-- THÊM ID CHO NÚT “+” -->
                 <ImageView
                     android:id="@+id/ivPlus"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:src="@drawable/mic_24px"
-                    android:tint="@android:color/holo_orange_dark"
                     android:contentDescription="@string/app_name"
                     android:clickable="true"
                     android:focusable="true"
@@ -177,7 +176,7 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_centerInParent="true"
-                        android:background="@drawable/device"
+                        android:background="@drawable/home_iot_device_24px"
                         android:contentDescription="@string/app_name" />
                 </RelativeLayout>
             </LinearLayout>
@@ -199,7 +198,7 @@
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_centerInParent="true"
-                        android:background="@drawable/settings"
+                        android:background="@drawable/settings_24px"
                         android:contentDescription="@string/app_name" />
                 </RelativeLayout>
             </LinearLayout>

@@ -235,16 +235,62 @@ public class DeviceInventoryActivity extends AppCompatActivity {
     }
 
     private void openAddToInventoryDialog() {
+        // Hiển thị dialog nhập tên thiết bị trước
+        showDeviceNameDialog();
+    }
+
+    private void showDeviceNameDialog() {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_enter_device_name, null, false);
+        EditText edtDeviceName = view.findViewById(R.id.edtDeviceName);
+
+        AlertDialog dialog = new AlertDialog.Builder(this, R.style.ThemeOverlay_Material3_Dialog)
+                .setTitle("Thêm thiết bị ESP")
+                .setView(view)
+                .setPositiveButton("Tiếp tục", null)
+                .setNegativeButton("Hủy", (d, w) -> d.dismiss())
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String deviceName = String.valueOf(edtDeviceName.getText()).trim();
+
+                if (deviceName.isEmpty()) {
+                    edtDeviceName.setError("Nhập tên thiết bị");
+                    return;
+                }
+
+                // Lưu tên thiết bị vào session
+                ProvisionSession.get().setDeviceName(deviceName);
+
+                dialog.dismiss();
+
+                // Hiển thị dialog chọn cách kết nối
+                showConnectionMethodDialog();
+            });
+        });
+
+        dialog.show();
+    }
+
+    private void showConnectionMethodDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.ThemeOverlay_Material3_Dialog);
-        builder.setTitle("Thêm thiết bị ESP");
+        builder.setTitle("Chọn cách kết nối");
 
         String[] options = {"Quét thiết bị Bluetooth", "Thêm thủ công"};
 
         builder.setItems(options, (dialog, which) -> {
             switch (which) {
                 case 0:
-                    // Gọi BLEScanActivity thay vì quét trực tiếp
-                    startActivity(new Intent(this, BLEScanActivity.class));
+                    // Lấy userId từ UserManager
+                    com.example.smarthomeui.smarthome.utils.UserManager userManager =
+                        new com.example.smarthomeui.smarthome.utils.UserManager(this);
+                    String userId = userManager.getUserId();
+
+                    // Gọi BLEScanActivity với userId (roomId để null vì đây là inventory)
+                    Intent intent = new Intent(this, BLEScanActivity.class);
+                    intent.putExtra("user_id", userId);
+                    // Không truyền room_id vì đây là inventory chung
+                    startActivity(intent);
                     break;
                 case 1:
                     openManualAddDialog();

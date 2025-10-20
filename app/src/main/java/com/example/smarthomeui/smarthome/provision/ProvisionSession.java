@@ -8,6 +8,7 @@ public class ProvisionSession {
     private static ProvisionSession instance;
     @Nullable private ESPDevice espDevice;
     private String pop = "abcd1234";
+    private String deviceName;
 
     private ProvisionSession() {}
 
@@ -22,6 +23,12 @@ public class ProvisionSession {
     public String getPop() { return pop; }
     public void setPop(String pop) { this.pop = pop; }
 
-    public void clear() { espDevice = null; }
+    public String getDeviceName() { return deviceName; }
+    public void setDeviceName(String deviceName) { this.deviceName = deviceName; }
+
+    public void clear() {
+        espDevice = null;
+        deviceName = null;
+    }
 }
 

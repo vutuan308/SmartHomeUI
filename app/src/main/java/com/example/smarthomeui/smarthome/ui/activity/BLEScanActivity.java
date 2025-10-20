@@ -47,6 +47,8 @@ public class BLEScanActivity extends AppCompatActivity {
     private Button btnConnect;
     private BluetoothDevice selectedDevice;
     private BluetoothAdapter bluetoothAdapter;
+    private String roomId;
+    private String userId;
 
     // Safe toast method to prevent DeadObjectException
     private void showSafeToast(String message, int duration) {
@@ -62,6 +64,17 @@ public class BLEScanActivity extends AppCompatActivity {
     @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ble_scan);
+
+        // Lấy roomId và userId từ Intent
+        roomId = getIntent().getStringExtra("room_id");
+        userId = getIntent().getStringExtra("user_id");
+
+        // Nếu không có userId, lấy từ UserManager
+        if (userId == null || userId.isEmpty()) {
+            com.example.smarthomeui.smarthome.utils.UserManager userManager =
+                new com.example.smarthomeui.smarthome.utils.UserManager(this);
+            userId = userManager.getUserId();
+        }
 
         // Khởi tạo Bluetooth adapter
         BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
@@ -365,7 +378,7 @@ public class BLEScanActivity extends AppCompatActivity {
             new android.os.Handler().postDelayed(() -> {
                 ProvisionSession.get().setEspDevice(esp);
                 showSafeToast("Đã kết nối thành công với " + getSafeName(device), Toast.LENGTH_SHORT);
-                WiFiProvisionActivity.start(this);
+                WiFiProvisionActivity.start(this, roomId, userId);
             }, 2000); // Đợi 2 giây để kết nối ổn định
 
         } catch (SecurityException se) {

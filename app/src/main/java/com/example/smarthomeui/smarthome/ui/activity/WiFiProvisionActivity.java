@@ -36,15 +36,35 @@ public class WiFiProvisionActivity extends AppCompatActivity {
     private ArrayAdapter<String> adapter;
     private final List<WiFiAccessPoint> aps = new ArrayList<>();
     private ESPProvisionManager provisionManager;
+    private String roomId;
+    private String userId;
 
     public static void start(AppCompatActivity activity) {
         activity.startActivity(new android.content.Intent(activity, WiFiProvisionActivity.class));
+    }
+
+    public static void start(AppCompatActivity activity, String roomId, String userId) {
+        Intent intent = new Intent(activity, WiFiProvisionActivity.class);
+        intent.putExtra("room_id", roomId);
+        intent.putExtra("user_id", userId);
+        activity.startActivity(intent);
     }
 
     @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wifi_provision);
         provisionManager = ESPProvisionManager.getInstance(this);
+
+        // Lấy roomId và userId từ Intent
+        roomId = getIntent().getStringExtra("room_id");
+        userId = getIntent().getStringExtra("user_id");
+
+        // Nếu không có trong Intent, lấy từ UserManager
+        if (userId == null || userId.isEmpty()) {
+            com.example.smarthomeui.smarthome.utils.UserManager userManager =
+                new com.example.smarthomeui.smarthome.utils.UserManager(this);
+            userId = userManager.getUserId();
+        }
 
         TextView tvBack = findViewById(R.id.tvBack);
         TextView tvCancel = findViewById(R.id.tvCancel);
@@ -145,14 +165,25 @@ public class WiFiProvisionActivity extends AppCompatActivity {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
                 String ssid = String.valueOf(edtSsid.getText()).trim();
                 String pass = String.valueOf(edtPass.getText());
-                if (ssid.isEmpty()) { edtSsid.setError(getString(R.string.demo_title)); return; }
-                doProvision(ssid, pass, dialog);
+
+                if (ssid.isEmpty()) {
+                    edtSsid.setError("Nhập SSID");
+                    return;
+                }
+
+                // Lấy device name từ ProvisionSession
+                String deviceName = ProvisionSession.get().getDeviceName();
+                if (deviceName == null || deviceName.isEmpty()) {
+                    deviceName = "ESP Device"; // Fallback nếu không có
+                }
+
+                doProvision(ssid, pass, deviceName, dialog);
             });
         });
         dialog.show();
     }
 
-    private void doProvision(String ssid, String pass, @Nullable AlertDialog dismissOnSuccess) {
+    private void doProvision(String ssid, String pass, String deviceName, @Nullable AlertDialog dismissOnSuccess) {
         ESPDevice dev = ProvisionSession.get().getEspDevice();
         if (dev == null) {
             Toast.makeText(this, R.string.no_device_in_session, Toast.LENGTH_LONG).show();
@@ -178,41 +209,52 @@ public class WiFiProvisionActivity extends AppCompatActivity {
                     runOnUiThread(() -> Toast.makeText(WiFiProvisionActivity.this, getString(R.string.provision_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
                 }
                 @Override public void deviceProvisioningSuccess() {
-
-                    var device = provisionManager.getEspDevice();
-                    String json = "";
-                    device.sendDataToCustomEndPoint("test", json.getBytes(), new ResponseListener() {
-                                @Override
-                                public void onSuccess(byte[] returnData) {
-                                    Log.d("WiFiProvision", "Sent to device: " + new String(returnData));
-                                }
-
-                                @Override
-                                public void onFailure(Exception e) {
-                                    Log.e("WiFiProvision", "Failed to send to device: " + e.getMessage());
-                                }
-                            }
-                    );
-
                     runOnUiThread(() -> {
-                        Toast.makeText(WiFiProvisionActivity.this, "Provisioning thành công!", Toast.LENGTH_LONG).show();
+                        try {
+                            // Tạo JSON chỉ với 3 trường: device_name, room_id, user_id
+                            org.json.JSONObject jsonObject = new org.json.JSONObject();
+                            jsonObject.put("device_name", deviceName);
+                            jsonObject.put("room_id", roomId != null ? roomId : "");
+                            jsonObject.put("user_id", userId != null ? userId : "");
 
-                        // Add to inventory
-                        String name = "ESP Device";
-                        Device newDevice = new Device(UUID.randomUUID().toString(), name, "ESP Device", false);
-                        newDevice.setToken(ssid);
-                        newDevice.addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
-                        newDevice.setBrightness(100);
-                        newDevice.setColor(0xFFFFFFFF);
+                            String json = jsonObject.toString();
 
+                            // Gửi JSON đến ESP device qua custom endpoint
+                            ESPDevice device = ProvisionSession.get().getEspDevice();
+                            if (device != null) {
+                                device.sendDataToCustomEndPoint("config", json.getBytes(), new ResponseListener() {
+                                    @Override
+                                    public void onSuccess(byte[] returnData) {
+                                        Log.d("WiFiProvision", "Config sent to device successfully: " + new String(returnData));
+                                    }
 
-                        if (dismissOnSuccess != null) dismissOnSuccess.dismiss();
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        Log.e("WiFiProvision", "Failed to send config to device: " + e.getMessage());
+                                    }
+                                });
+                            }
 
-                        // Quay về DeviceInventoryActivity thay vì finish()
-                        Intent intent = new Intent(WiFiProvisionActivity.this, DeviceInventoryActivity.class);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                        finish();
+                            Toast.makeText(WiFiProvisionActivity.this, "Provisioning thành công!", Toast.LENGTH_LONG).show();
+
+                            // Tạo device mới với thông tin
+                            Device newDevice = new Device(UUID.randomUUID().toString(), deviceName, "ESP Device", false);
+                            newDevice.addCaps(Device.CAP_POWER, Device.CAP_BRIGHTNESS, Device.CAP_COLOR);
+                            newDevice.setBrightness(100);
+                            newDevice.setColor(0xFFFFFFFF);
+
+                            if (dismissOnSuccess != null) dismissOnSuccess.dismiss();
+
+                            // Quay về DeviceInventoryActivity
+                            Intent intent = new Intent(WiFiProvisionActivity.this, DeviceInventoryActivity.class);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
+                            finish();
+
+                        } catch (org.json.JSONException e) {
+                            Log.e("WiFiProvision", "JSON error: " + e.getMessage());
+                            Toast.makeText(WiFiProvisionActivity.this, "Lỗi tạo JSON: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
                     });
                 }
             });

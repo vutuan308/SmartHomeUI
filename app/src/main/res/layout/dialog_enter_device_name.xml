@@ -8,27 +8,18 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Nhập thông tin WiFi"
+        android:text="Nhập tên thiết bị"
         android:textStyle="bold"
         android:textSize="16sp"
         android:paddingBottom="12dp"/>
 
-
     <EditText
-        android:id="@+id/edtSsid"
+        android:id="@+id/edtDeviceName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="SSID"
+        android:hint="Tên thiết bị (VD: Đèn phòng khách)"
         android:inputType="text"
         android:minHeight="48dp" />
 
-    <EditText
-        android:id="@+id/edtPass"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Mật khẩu (có thể để trống nếu mạng mở)"
-        android:inputType="textPassword"
-        android:minHeight="48dp"
-        android:paddingTop="8dp" />
-
 </LinearLayout>
+

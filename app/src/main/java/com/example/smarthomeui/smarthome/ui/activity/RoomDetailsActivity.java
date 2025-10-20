@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.adapter.SingleRoomAdapter;
 import com.example.smarthomeui.smarthome.components.DeviceControlBottomSheet;
-import com.example.smarthomeui.smarthome.data.SmartRepository;
 import com.example.smarthomeui.smarthome.model.Device;
 import com.example.smarthomeui.smarthome.model.Room;
 import com.example.smarthomeui.smarthome.network.Api;
@@ -54,7 +53,7 @@ public class RoomDetailsActivity extends AppCompatActivity {
 
         houseId = getIntent().getStringExtra("house_id");
         roomId  = getIntent().getStringExtra("room_id");
-        room    = SmartRepository.get(this).getRoomById(houseId, roomId);
+
 
         // Header
         tvTitle = findViewById(R.id.tvRoomTitle);
@@ -216,46 +215,7 @@ public class RoomDetailsActivity extends AppCompatActivity {
 
     /** Mở dialog chọn 1 thiết bị từ Kho và gán vào phòng */
     private void openPickFromInventory() {
-        List<Device> inv = SmartRepository.get(this).getInventory();
-        if (inv == null || inv.isEmpty()) {
-            new AlertDialog.Builder(this)
-                    .setTitle("Kho trống")
-                    .setMessage("Hiện chưa có thiết bị nào trong Kho. Bạn muốn mở Kho để thêm mới không?")
-                    .setNegativeButton("Đóng", null)
-                    .setPositiveButton("Mở Kho", (d, w) ->
-                            startActivity(new Intent(this, DeviceInventoryActivity.class)))
-                    .show();
-            return;
-        }
 
-        String[] items = new String[inv.size()];
-        for (int i = 0; i < inv.size(); i++) {
-            Device di = inv.get(i);
-            items[i] = di.getName() + " • " + (di.getType() == null ? "Unknown" : di.getType());
-        }
-        final int[] selected = {0};
-
-        new AlertDialog.Builder(this)
-                .setTitle("Chọn thiết bị từ Kho")
-                .setSingleChoiceItems(items, 0, (dlg, which) -> selected[0] = which)
-                .setNegativeButton("Huỷ", null)
-                .setPositiveButton("Thêm vào phòng", (dlg, w) -> {
-                    Device picked = inv.get(selected[0]);
-
-                    // Gán vào phòng (sẽ tự động xóa khỏi inventory)
-                    boolean success = SmartRepository.get(this).assignInventoryDeviceToRoom(
-                            picked.getId(), houseId, roomId
-                    );
-
-                    if (success) {
-                        // Cập nhật UI (thiết bị đã được thêm vào list của room)
-                        int newPos = devices.size() - 1;
-                        if (newPos < 0) newPos = 0;
-                        adapter.notifyItemInserted(newPos);
-                        rv.smoothScrollToPosition(newPos);
-                    }
-                })
-                .show();
     }
 
     /* Nếu vẫn muốn giữ dialog tạo “thiết bị mới” thì để lại hàm cũ,
@@ -283,7 +243,6 @@ public class RoomDetailsActivity extends AppCompatActivity {
                     Device dev = new Device(java.util.UUID.randomUUID().toString(), name, type, false);
                     if ("Light".equalsIgnoreCase(type)) dev.setBrightness(100);
 
-                    SmartRepository.get(this).addDevice(houseId, roomId, dev);
 
                     int newPos = devices.size() - 1;
                     if (newPos < 0) newPos = 0;

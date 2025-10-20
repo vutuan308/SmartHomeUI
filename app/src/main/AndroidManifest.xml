@@ -58,17 +58,17 @@
             android:exported="false" />
         <activity android:name=".smarthome.ui.activity.HouseListActivity"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity android:name=".smarthome.ai_speech_reg.MainActivitySR"
-            android:exported="true">
 <!--            <intent-filter>-->
 <!--                <action android:name="android.intent.action.MAIN" />-->
 <!--                <category android:name="android.intent.category.LAUNCHER" />-->
 <!--            </intent-filter>-->
+        </activity>
+        <activity android:name=".smarthome.ai_speech_reg.MainActivitySR"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
         <activity android:name=".smarthome.ui.activity.BLEScanActivity" android:exported="false" />
         <activity android:name=".smarthome.ui.activity.WiFiProvisionActivity" android:exported="false" />

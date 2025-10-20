@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
+import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -19,6 +21,10 @@ import com.example.smarthomeui.smarthome.ai_speech_reg.DeviceModels.ParseResult;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.model.Device;
+import com.example.smarthomeui.smarthome.ui.activity.AllRoomsActivity;
+import com.example.smarthomeui.smarthome.ui.activity.DeviceInventoryActivity;
+import com.example.smarthomeui.smarthome.ui.activity.HouseListActivity;
+import com.example.smarthomeui.smarthome.ui.activity.SettingsActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
@@ -54,7 +60,7 @@ public class MainActivitySR extends AppCompatActivity {
         speechHelper = new SpeechHelper(this);
 
         fabMic.setOnClickListener(v -> requestMicAndStart());
-
+        setupBottomNavigation();
     }
 
     private void requestMicAndStart() {
@@ -101,7 +107,20 @@ public class MainActivitySR extends AppCompatActivity {
             recognizer = null;
         }
     }
-
+    private void setupBottomNavigation() {
+        findViewById(R.id.ivDevices).setOnClickListener(v ->
+                startActivity(new Intent(this, DeviceInventoryActivity.class)));
+        findViewById(R.id.ivRooms).setOnClickListener(v ->
+                startActivity(new Intent(this, AllRoomsActivity.class)));
+        findViewById(R.id.ivControl).setOnClickListener(v ->
+                startActivity(new Intent(this, MainActivitySR.class)));
+        findViewById(R.id.ivHome).setOnClickListener(v ->
+                startActivity(new Intent(this, HouseListActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)));
+        View ivSetting = findViewById(R.id.ivSetting);
+        if (ivSetting != null) ivSetting.setOnClickListener(v ->
+                startActivity(new Intent(this, SettingsActivity.class)));
+    }
     private void emitParse(String text) {
         ParseResult r = parser.parse(text);
 

@@ -2,6 +2,7 @@ package com.example.smarthomeui.smarthome.ui.activity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -15,6 +16,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.espressif.provisioning.listeners.ResponseListener;
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.data.SmartRepository;
 import com.example.smarthomeui.smarthome.model.Device;
@@ -35,6 +37,7 @@ public class WiFiProvisionActivity extends AppCompatActivity {
 
     private ArrayAdapter<String> adapter;
     private final List<WiFiAccessPoint> aps = new ArrayList<>();
+    private ESPProvisionManager provisionManager;
 
     public static void start(AppCompatActivity activity) {
         activity.startActivity(new android.content.Intent(activity, WiFiProvisionActivity.class));
@@ -43,6 +46,7 @@ public class WiFiProvisionActivity extends AppCompatActivity {
     @Override protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wifi_provision);
+        provisionManager = ESPProvisionManager.getInstance(this);
 
         TextView tvBack = findViewById(R.id.tvBack);
         TextView tvCancel = findViewById(R.id.tvCancel);
@@ -176,6 +180,22 @@ public class WiFiProvisionActivity extends AppCompatActivity {
                     runOnUiThread(() -> Toast.makeText(WiFiProvisionActivity.this, getString(R.string.provision_failed, e.getMessage()), Toast.LENGTH_SHORT).show());
                 }
                 @Override public void deviceProvisioningSuccess() {
+
+                    var device = provisionManager.getEspDevice();
+                    String json = "";
+                    device.sendDataToCustomEndPoint("test", json.getBytes(), new ResponseListener() {
+                                @Override
+                                public void onSuccess(byte[] returnData) {
+                                    Log.d("WiFiProvision", "Sent to device: " + new String(returnData));
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    Log.e("WiFiProvision", "Failed to send to device: " + e.getMessage());
+                                }
+                            }
+                    );
+
                     runOnUiThread(() -> {
                         Toast.makeText(WiFiProvisionActivity.this, "Provisioning thành công!", Toast.LENGTH_LONG).show();
 

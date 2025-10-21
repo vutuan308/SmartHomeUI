@@ -21,6 +21,21 @@ public class RoomsByHouseWrap {
         public List<RoomDto> rooms = new ArrayList<>();
     }
 
+    /**
+     * Lấy tất cả các phòng từ tất cả các nhóm (flatten)
+     */
+    public List<RoomDto> getRooms() {
+        List<RoomDto> allRooms = new ArrayList<>();
+        if (groups != null) {
+            for (Group group : groups) {
+                if (group.rooms != null) {
+                    allRooms.addAll(group.rooms);
+                }
+            }
+        }
+        return allRooms;
+    }
+
     public static class Deserializer implements JsonDeserializer<RoomsByHouseWrap> {
         @Override
         public RoomsByHouseWrap deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext ctx)

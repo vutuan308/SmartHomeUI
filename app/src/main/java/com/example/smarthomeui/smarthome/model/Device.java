@@ -19,6 +19,7 @@ public class Device implements Serializable {
     private String type;     // "Light", "Fan", "AC", "Outlet", ...
     private boolean on;
     private String room;     // Thêm thuộc tính room
+    private Integer roomId;  // ID của phòng từ API
     private int value;       // Thêm thuộc tính value (brightness, speed, etc.)
     private String powerConsumption; // Thêm thuộc tính công suất tiêu thụ
 
@@ -171,5 +172,13 @@ public class Device implements Serializable {
     public boolean isAC() {
         return has(CAP_TEMPERATURE) ||
                 (type != null && (type.equalsIgnoreCase("ac") || type.toLowerCase().contains("air")));
+    }
+
+    public Integer getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(Integer roomId) {
+        this.roomId = roomId;
     }
 }

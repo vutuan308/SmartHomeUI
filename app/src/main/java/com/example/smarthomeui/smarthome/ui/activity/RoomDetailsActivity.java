@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smarthomeui.R;
 import com.example.smarthomeui.smarthome.adapter.SingleRoomAdapter;
+import com.example.smarthomeui.smarthome.adapter.UnassignedDeviceAdapter;
 import com.example.smarthomeui.smarthome.components.DeviceControlBottomSheet;
 import com.example.smarthomeui.smarthome.model.Device;
 import com.example.smarthomeui.smarthome.model.Room;
@@ -67,12 +68,25 @@ public class RoomDetailsActivity extends AppCompatActivity {
 
         devices = new ArrayList<>();
 
-        adapter = new SingleRoomAdapter(devices, (device, pos) -> {
-            DeviceControlBottomSheet.newInstance(device, changed -> {
-                int idx = pos;
-                if (idx < 0 || idx >= devices.size()) idx = devices.indexOf(changed);
-                if (idx >= 0) adapter.notifyItemChanged(idx);
-            }).show(getSupportFragmentManager(), "device_control");
+        adapter = new SingleRoomAdapter(devices, new SingleRoomAdapter.OnDeviceClick() {
+            @Override
+            public void onClick(Device device, int pos) {
+                DeviceControlBottomSheet.newInstance(device, changed -> {
+                    int idx = pos;
+                    if (idx < 0 || idx >= devices.size()) idx = devices.indexOf(changed);
+                    if (idx >= 0) adapter.notifyItemChanged(idx);
+                }).show(getSupportFragmentManager(), "device_control");
+            }
+
+            @Override
+            public void onEdit(Device device, int pos) {
+                openEditDeviceDialog(device, pos);
+            }
+
+            @Override
+            public void onDelete(Device device, int pos) {
+                showDeleteDeviceConfirmation(device, pos);
+            }
         });
         rv.setAdapter(adapter);
 
@@ -215,40 +229,243 @@ public class RoomDetailsActivity extends AppCompatActivity {
 
     /** Mở dialog chọn 1 thiết bị từ Kho và gán vào phòng */
     private void openPickFromInventory() {
+        // Fetch all devices from API
+        Api api = ApiClient.getClient(this).create(Api.class);
+        Call<DeviceListWrap> call = api.getDevices(0, 100); // Load 100 devices
 
+        call.enqueue(new Callback<DeviceListWrap>() {
+            @Override
+            public void onResponse(Call<DeviceListWrap> call, Response<DeviceListWrap> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    DeviceListWrap deviceWrap = response.body();
+                    List<DeviceDto> allDevices = deviceWrap.getDevices();
+
+                    if (allDevices != null && !allDevices.isEmpty()) {
+                        // Filter unassigned devices (roomId == null)
+                        List<DeviceDto> unassignedDevices = new ArrayList<>();
+                        for (DeviceDto deviceDto : allDevices) {
+                            // Log để debug
+                            android.util.Log.d("RoomDetails", "Device: " + deviceDto.getName() +
+                                ", roomId: " + deviceDto.getRoomId());
+
+                            if (deviceDto.getRoomId() == null) {
+                                unassignedDevices.add(deviceDto);
+                            }
+                        }
+
+                        // Log số lượng
+                        android.util.Log.d("RoomDetails", "Total devices: " + allDevices.size() +
+                            ", Unassigned: " + unassignedDevices.size());
+
+                        if (!unassignedDevices.isEmpty()) {
+                            // Show devices in a dialog
+                            showDevicesDialog(unassignedDevices);
+                        } else {
+                            Toast.makeText(RoomDetailsActivity.this,
+                                "Không có thiết bị nào chưa được gán vào phòng (" + allDevices.size() + " thiết bị tổng)",
+                                Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        Toast.makeText(RoomDetailsActivity.this, "Không có thiết bị nào", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(RoomDetailsActivity.this, "Không thể tải thiết bị từ server", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DeviceListWrap> call, Throwable t) {
+                Toast.makeText(RoomDetailsActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    /* Nếu vẫn muốn giữ dialog tạo “thiết bị mới” thì để lại hàm cũ,
-       còn bây giờ đã chuyển sang lấy từ Kho nên không dùng nữa. */
-    @SuppressWarnings("unused")
-    private void openAddDeviceDialog_OLD() {
+    /** Hiển thị dialog danh sách thiết bị chưa được gán */
+    private void showDevicesDialog(List<DeviceDto> deviceDtos) {
+        // Dialog layout
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_pick_device, null);
+        RecyclerView rvUnassignedDevices = dialogView.findViewById(R.id.rvUnassignedDevices);
+        TextView tvEmptyMessage = dialogView.findViewById(R.id.tvEmptyMessage);
+
+        rvUnassignedDevices.setLayoutManager(new LinearLayoutManager(this));
+        rvUnassignedDevices.setVisibility(View.VISIBLE);
+        tvEmptyMessage.setVisibility(View.GONE);
+
+        // Create dialog first
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setNegativeButton("Đóng", null)
+                .create();
+
+        // Adapter for RecyclerView in dialog
+        UnassignedDeviceAdapter dialogAdapter = new UnassignedDeviceAdapter(deviceDtos, deviceDto -> {
+            // Handle device click: call API to assign device to room
+            addDeviceToRoomAPI(deviceDto, dialog);
+        });
+
+        rvUnassignedDevices.setAdapter(dialogAdapter);
+        dialog.show();
+    }
+
+    /** Gọi API để thêm thiết bị vào phòng */
+    private void addDeviceToRoomAPI(DeviceDto deviceDto, AlertDialog dialog) {
+        // Parse roomId to int for API call
+        int apiRoomId;
+        try {
+            apiRoomId = Integer.parseInt(roomId);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Room ID không hợp lệ", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int deviceId = deviceDto.getId();
+
+        // Call API to add device to room
+        Api api = ApiClient.getClient(this).create(Api.class);
+        Call<Void> call = api.addDeviceToRoom(apiRoomId, deviceId);
+
+        call.enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(RoomDetailsActivity.this, "Đã thêm thiết bị vào phòng", Toast.LENGTH_SHORT).show();
+
+                    // Convert DeviceDto to Device and add to list
+                    Device newDevice = convertApiDeviceToDevice(deviceDto);
+                    devices.add(newDevice);
+                    adapter.notifyItemInserted(devices.size() - 1);
+
+                    // Close dialog
+                    dialog.dismiss();
+
+                    // Reload devices to ensure sync
+                    loadDevicesFromAPI();
+                } else {
+                    Toast.makeText(RoomDetailsActivity.this, "Không thể thêm thiết bị: " + response.code(), Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(RoomDetailsActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    /** Mở dialog sửa tên thiết bị */
+    private void openEditDeviceDialog(Device device, int pos) {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_device, null, false);
         EditText edtName = view.findViewById(R.id.edtDeviceName);
-        Spinner spType   = view.findViewById(R.id.spDeviceType);
+        Spinner spType = view.findViewById(R.id.spDeviceType);
+
+        // Pre-fill current values
+        edtName.setText(device.getName());
 
         ArrayAdapter<CharSequence> typeAdapter = ArrayAdapter.createFromResource(
                 this, R.array.device_types, android.R.layout.simple_spinner_item);
         typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spType.setAdapter(typeAdapter);
 
+        // Select current type in spinner
+        String currentType = device.getType();
+        if (currentType != null) {
+            int spinnerPosition = typeAdapter.getPosition(currentType);
+            if (spinnerPosition >= 0) {
+                spType.setSelection(spinnerPosition);
+            }
+        }
+
         new AlertDialog.Builder(this)
-                .setTitle("Thêm thiết bị (cũ)")
+                .setTitle("Sửa thiết bị")
                 .setView(view)
                 .setNegativeButton("Huỷ", null)
-                .setPositiveButton("Thêm", (d, w) -> {
-                    String name = edtName.getText().toString().trim();
-                    String type = String.valueOf(spType.getSelectedItem());
-                    if (name.isEmpty() || room == null) return;
+                .setPositiveButton("Lưu", (d, w) -> {
+                    String newName = edtName.getText().toString().trim();
+                    String newType = String.valueOf(spType.getSelectedItem());
 
-                    Device dev = new Device(java.util.UUID.randomUUID().toString(), name, type, false);
-                    if ("Light".equalsIgnoreCase(type)) dev.setBrightness(100);
+                    if (newName.isEmpty()) {
+                        Toast.makeText(this, "Tên không được để trống", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
 
+                    // Update device
+                    device.setName(newName);
+                    device.setType(newType);
 
-                    int newPos = devices.size() - 1;
-                    if (newPos < 0) newPos = 0;
-                    adapter.notifyItemInserted(newPos);
-                    rv.smoothScrollToPosition(newPos);
+                    // Update adapter
+                    if (pos >= 0 && pos < devices.size()) {
+                        adapter.notifyItemChanged(pos);
+                        Toast.makeText(this, "Đã cập nhật thiết bị", Toast.LENGTH_SHORT).show();
+                    }
                 })
                 .show();
+    }
+
+    /** Hiển thị dialog xác nhận xóa thiết bị */
+    private void showDeleteDeviceConfirmation(Device device, int pos) {
+        new AlertDialog.Builder(this)
+                .setTitle("Xóa thiết bị")
+                .setMessage("Bạn có chắc chắn muốn xóa thiết bị \"" + device.getName() + "\" ra khỏi phòng?")
+                .setNegativeButton("Huỷ", null)
+                .setPositiveButton("Xóa", (d, w) -> {
+                    // Call API to remove device from room
+                    removeDeviceFromRoomAPI(device, pos);
+                })
+                .show();
+    }
+
+    /** Gọi API để xóa thiết bị ra khỏi phòng */
+    private void removeDeviceFromRoomAPI(Device device, int pos) {
+        // Parse roomId to int for API call
+        int apiRoomId;
+        try {
+            apiRoomId = Integer.parseInt(roomId);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Room ID không hợp lệ", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Get device ID from token (API ID)
+        int deviceId;
+        try {
+            deviceId = Integer.parseInt(device.getToken());
+        } catch (NumberFormatException e) {
+            // Fallback to device.getId() if token is not set
+            try {
+                deviceId = Integer.parseInt(device.getId());
+            } catch (NumberFormatException ex) {
+                Toast.makeText(this, "Device ID không hợp lệ", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        // Call API to remove device from room
+        Api api = ApiClient.getClient(this).create(Api.class);
+        Call<Void> call = api.removeDeviceFromRoom(apiRoomId, deviceId);
+
+        call.enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(RoomDetailsActivity.this, "Đã xóa thiết bị ra khỏi phòng", Toast.LENGTH_SHORT).show();
+
+                    // Remove device from list
+                    if (pos >= 0 && pos < devices.size()) {
+                        devices.remove(pos);
+                        adapter.notifyItemRemoved(pos);
+                    }
+
+                    // Reload devices to ensure sync
+                    loadDevicesFromAPI();
+                } else {
+                    Toast.makeText(RoomDetailsActivity.this, "Không thể xóa thiết bị: " + response.code(), Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Toast.makeText(RoomDetailsActivity.this, "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

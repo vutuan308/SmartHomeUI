@@ -120,13 +120,13 @@ public class DeviceInventoryActivity extends AppCompatActivity {
                 DeviceControlBottomSheet.newInstance(d, changed -> adapter.notifyItemChanged(pos))
                         .show(getSupportFragmentManager(), "control");
             }
-            @Override public void onAssign(Device d, int pos) {
-                // TODO: mở dialog chọn Nhà/Phòng rồi gọi SmartRepository.assignInventoryDeviceToRoom(...)
-                // (phần gán này bạn bảo khi nào cần mình gửi thêm)
+            @Override public void onEdit(Device d, int pos) {
+                // Mở dialog sửa thông tin thiết bị
+                showEditDeviceDialog(d, pos);
             }
             @Override public void onDelete(Device d, int pos) {
-                inventory.remove(pos);
-                adapter.notifyItemRemoved(pos);
+                // Hiển thị dialog xác nhận xóa
+                showDeleteConfirmDialog(d, pos);
             }
         });
         rv.setAdapter(adapter);
@@ -212,6 +212,7 @@ public class DeviceInventoryActivity extends AppCompatActivity {
 
         Device device = new Device(deviceId, name, type, false);
         device.setToken(String.valueOf(deviceDto.getId())); // Dùng API ID làm token
+        device.setRoomId(deviceDto.getRoomId()); // Lưu roomId từ API
 
         // Phân loại điều khiển dựa trên type - chỉ hỗ trợ quạt và đèn
         String lowerType = type.toLowerCase(Locale.US);
@@ -688,6 +689,352 @@ public class DeviceInventoryActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "Cần cấp quyền để quét/kết nối thiết bị ESP", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    /**
+     * Hiển thị dialog sửa thông tin thiết bị
+     */
+    private void showEditDeviceDialog(Device device, int position) {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_edit_device, null, false);
+        EditText edtName = view.findViewById(R.id.edtDeviceName);
+        android.widget.Spinner spinnerRoom = view.findViewById(R.id.spinnerRoom);
+
+        // Điền thông tin hiện tại
+        edtName.setText(device.getName());
+
+        // Log current device state
+        Log.d("EDIT_DEVICE", "Opening edit dialog for device: " + device.getName());
+        Log.d("EDIT_DEVICE", "Current device roomId: " + device.getRoomId());
+
+        // Tải danh sách phòng
+        loadRoomsForEditDialog(spinnerRoom, device);
+
+        AlertDialog dialog = new AlertDialog.Builder(this, R.style.ThemeOverlay_Material3_Dialog)
+                .setTitle("Sửa thông tin thiết bị")
+                .setView(view)
+                .setPositiveButton("Lưu", null)
+                .setNegativeButton("Hủy", (d, w) -> d.dismiss())
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String newName = String.valueOf(edtName.getText()).trim();
+
+                if (newName.isEmpty()) {
+                    edtName.setError("Nhập tên thiết bị");
+                    return;
+                }
+
+                // Lấy roomID từ Spinner
+                Object selectedItem = spinnerRoom.getSelectedItem();
+                Log.d("EDIT_DEVICE", "Selected item: " + selectedItem);
+
+                if (selectedItem == null) {
+                    Toast.makeText(DeviceInventoryActivity.this,
+                        "Vui lòng chọn phòng", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                if (!(selectedItem instanceof RoomSpinnerItem)) {
+                    Toast.makeText(DeviceInventoryActivity.this,
+                        "Lỗi: Item không hợp lệ", Toast.LENGTH_SHORT).show();
+                    Log.e("EDIT_DEVICE", "Selected item is not RoomSpinnerItem: " + selectedItem.getClass().getName());
+                    return;
+                }
+
+                RoomSpinnerItem roomItem = (RoomSpinnerItem) selectedItem;
+                Log.d("EDIT_DEVICE", "Selected room ID: " + roomItem.id + ", Name: " + roomItem.roomName);
+
+                // Kiểm tra nếu chưa chọn phòng thực sự (vẫn là placeholder)
+                if (roomItem.id == -1) {
+                    Toast.makeText(DeviceInventoryActivity.this,
+                        "Vui lòng chọn một phòng để gắn thiết bị", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // Đảm bảo roomId là một số nguyên dương hợp lệ
+                if (roomItem.id <= 0) {
+                    Toast.makeText(DeviceInventoryActivity.this,
+                        "Lỗi: Room ID không hợp lệ", Toast.LENGTH_SHORT).show();
+                    Log.e("EDIT_DEVICE", "Invalid room ID: " + roomItem.id);
+                    return;
+                }
+
+                // Gọi API cập nhật thiết bị với roomId đã chọn (đảm bảo không null)
+                Integer roomIdToSend = Integer.valueOf(roomItem.id);
+                Log.d("EDIT_DEVICE", "Sending roomId to API: " + roomIdToSend);
+                updateDeviceAPI(device, newName, roomIdToSend, position, dialog);
+            });
+        });
+
+        dialog.show();
+    }
+
+    /**
+     * Tải danh sách phòng cho dialog sửa thiết bị
+     */
+    private void loadRoomsForEditDialog(android.widget.Spinner spinner, Device device) {
+        Api api = ApiClient.getClient(this).create(Api.class);
+
+        // Tạo list cho các phòng kèm thông tin nhà
+        List<RoomSpinnerItem> roomItems = new ArrayList<>();
+
+        // Tải danh sách phòng từ API (đã nhóm theo nhà)
+        Api roomApi = ApiClient.getClient(DeviceInventoryActivity.this).create(Api.class);
+        roomApi.getRoomsGrouped(0, 100).enqueue(new Callback<com.example.smarthomeui.smarthome.network.RoomsByHouseWrap>() {
+            @Override
+            public void onResponse(Call<com.example.smarthomeui.smarthome.network.RoomsByHouseWrap> call,
+                                 Response<com.example.smarthomeui.smarthome.network.RoomsByHouseWrap> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    Integer deviceRoomId = device.getRoomId();
+
+                    // Luôn thêm placeholder ở đầu
+                    roomItems.add(new RoomSpinnerItem(-1, "-- Chọn phòng --", ""));
+
+                    // Lấy groups để có thông tin về nhà
+                    List<com.example.smarthomeui.smarthome.network.RoomsByHouseWrap.Group> groups =
+                        response.body().groups;
+
+                    if (groups != null) {
+                        // Duyệt qua từng group (nhà) để lấy phòng và tên nhà
+                        for (com.example.smarthomeui.smarthome.network.RoomsByHouseWrap.Group group : groups) {
+                            String houseName = group.houseName != null ? group.houseName : "Nhà";
+
+                            if (group.rooms != null) {
+                                for (com.example.smarthomeui.smarthome.network.RoomDto room : group.rooms) {
+                                    roomItems.add(new RoomSpinnerItem(room.id, room.name, houseName));
+                                }
+                            }
+                        }
+                    }
+
+                    runOnUiThread(() -> {
+                        if (roomItems.size() <= 1) { // Chỉ có placeholder
+                            Toast.makeText(DeviceInventoryActivity.this,
+                                "Không có phòng nào. Vui lòng tạo phòng trước.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        ArrayAdapter<RoomSpinnerItem> adapter = new ArrayAdapter<>(
+                            DeviceInventoryActivity.this,
+                            android.R.layout.simple_spinner_item,
+                            roomItems
+                        );
+                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                        spinner.setAdapter(adapter);
+
+                        // Tự động chọn phòng hiện tại của thiết bị
+                        int selectedPosition = 0; // Mặc định là placeholder "-- Chọn phòng --"
+
+                        if (deviceRoomId != null) {
+                            // Tìm vị trí của phòng hiện tại
+                            boolean found = false;
+                            for (int i = 0; i < roomItems.size(); i++) {
+                                if (roomItems.get(i).id == deviceRoomId) {
+                                    selectedPosition = i;
+                                    found = true;
+                                    Log.d("EDIT_DEVICE", "Found matching room at position: " + i);
+                                    break;
+                                }
+                            }
+
+                            // Nếu không tìm thấy phòng khớp với roomId, để trống (position 0)
+                            if (!found) {
+                                Log.d("EDIT_DEVICE", "Room ID " + deviceRoomId + " not found in list. Setting to placeholder.");
+                                selectedPosition = 0;
+                            }
+                        }
+
+                        spinner.setSelection(selectedPosition);
+                    });
+                } else {
+                    runOnUiThread(() ->
+                        Toast.makeText(DeviceInventoryActivity.this,
+                            "Không thể tải danh sách phòng", Toast.LENGTH_SHORT).show());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<com.example.smarthomeui.smarthome.network.RoomsByHouseWrap> call, Throwable t) {
+                runOnUiThread(() -> {
+                    Log.e("LOAD_ROOMS", "Error loading rooms", t);
+                    Toast.makeText(DeviceInventoryActivity.this,
+                        "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
+    }
+
+    /**
+     * Setup spinner mặc định nếu không tải được danh sách phòng
+     */
+    private void setupDefaultSpinner(android.widget.Spinner spinner, List<RoomSpinnerItem> roomItems, Device device) {
+        runOnUiThread(() -> {
+            ArrayAdapter<RoomSpinnerItem> adapter = new ArrayAdapter<>(
+                DeviceInventoryActivity.this,
+                android.R.layout.simple_spinner_item,
+                roomItems
+            );
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinner.setAdapter(adapter);
+            if (!roomItems.isEmpty()) {
+                spinner.setSelection(0);
+            }
+        });
+    }
+
+    /**
+     * Class helper cho Spinner items với thông tin nhà
+     */
+    private static class RoomSpinnerItem {
+        int id;
+        String roomName;
+        String houseName;
+
+        RoomSpinnerItem(int id, String roomName, String houseName) {
+            this.id = id;
+            this.roomName = roomName;
+            this.houseName = houseName;
+        }
+
+        @Override
+        public String toString() {
+            // Hiển thị: "Tên phòng - Tên nhà"
+            return roomName + " - " + houseName;
+        }
+    }
+
+    /**
+     * Gọi API để cập nhật thông tin thiết bị
+     */
+    private void updateDeviceAPI(Device device, String newName, Integer roomId, int position, AlertDialog dialog) {
+        // Lấy device ID từ token (đã lưu API ID vào token)
+        String deviceIdStr = device.getToken();
+        if (deviceIdStr == null || deviceIdStr.isEmpty()) {
+            Toast.makeText(this, "Không tìm thấy ID thiết bị", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            int deviceId = Integer.parseInt(deviceIdStr);
+
+            // Log để debug
+            Log.d("UPDATE_DEVICE", "Device ID: " + deviceId);
+            Log.d("UPDATE_DEVICE", "New Name: " + newName);
+            Log.d("UPDATE_DEVICE", "Room ID: " + roomId);
+
+            Api api = ApiClient.getClient(this).create(Api.class);
+            com.example.smarthomeui.smarthome.network.UpdateDeviceReq request =
+                new com.example.smarthomeui.smarthome.network.UpdateDeviceReq(newName, roomId);
+
+            // Log request để kiểm tra
+            Log.d("UPDATE_DEVICE", "Request created with roomID: " + roomId);
+
+            Call<DeviceDto> call = api.updateDevice(deviceId, request);
+            call.enqueue(new Callback<DeviceDto>() {
+                @Override
+                public void onResponse(Call<DeviceDto> call, Response<DeviceDto> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        DeviceDto updatedDevice = response.body();
+                        Log.d("UPDATE_DEVICE", "Response - Device updated successfully. RoomID from response: " + updatedDevice.getRoomId());
+
+                        runOnUiThread(() -> {
+                            // Cập nhật device trong danh sách với roomId từ response
+                            device.setName(newName);
+                            device.setRoomId(updatedDevice.getRoomId()); // Lấy roomId từ response
+                            adapter.notifyItemChanged(position);
+                            Toast.makeText(DeviceInventoryActivity.this,
+                                "Đã cập nhật thiết bị", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        });
+                    } else {
+                        Log.e("UPDATE_DEVICE", "Response failed. Code: " + response.code());
+                        try {
+                            String errorBody = response.errorBody() != null ? response.errorBody().string() : "No error body";
+                            Log.e("UPDATE_DEVICE", "Error body: " + errorBody);
+                        } catch (Exception e) {
+                            Log.e("UPDATE_DEVICE", "Error reading error body", e);
+                        }
+
+                        runOnUiThread(() ->
+                            Toast.makeText(DeviceInventoryActivity.this,
+                                "Không thể cập nhật thiết bị. Code: " + response.code(), Toast.LENGTH_SHORT).show());
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<DeviceDto> call, Throwable t) {
+                    runOnUiThread(() -> {
+                        Log.e("API_UPDATE_DEVICE", "Error updating device", t);
+                        Toast.makeText(DeviceInventoryActivity.this,
+                            "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+                }
+            });
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "ID thiết bị không hợp lệ", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Hiển thị dialog xác nhận xóa thiết bị
+     */
+    private void showDeleteConfirmDialog(Device device, int position) {
+        new AlertDialog.Builder(this, R.style.ThemeOverlay_Material3_Dialog)
+                .setTitle("Xóa thiết bị")
+                .setMessage("Bạn có chắc chắn muốn xóa thiết bị \"" + device.getName() + "\"?")
+                .setPositiveButton("Xóa", (d, w) -> deleteDeviceAPI(device, position))
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    /**
+     * Gọi API để xóa thiết bị
+     */
+    private void deleteDeviceAPI(Device device, int position) {
+        // Lấy device ID từ token
+        String deviceIdStr = device.getToken();
+        if (deviceIdStr == null || deviceIdStr.isEmpty()) {
+            Toast.makeText(this, "Không tìm thấy ID thiết bị", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            int deviceId = Integer.parseInt(deviceIdStr);
+
+            Api api = ApiClient.getClient(this).create(Api.class);
+            Call<Void> call = api.deleteDevice(deviceId);
+
+            call.enqueue(new Callback<Void>() {
+                @Override
+                public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        runOnUiThread(() -> {
+                            // Xóa device khỏi danh sách
+                            inventory.remove(position);
+                            adapter.notifyItemRemoved(position);
+                            Toast.makeText(DeviceInventoryActivity.this,
+                                "Đã xóa thiết bị", Toast.LENGTH_SHORT).show();
+                        });
+                    } else {
+                        runOnUiThread(() ->
+                            Toast.makeText(DeviceInventoryActivity.this,
+                                "Không thể xóa thiết bị", Toast.LENGTH_SHORT).show());
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<Void> call, Throwable t) {
+                    runOnUiThread(() -> {
+                        Log.e("API_DELETE_DEVICE", "Error deleting device", t);
+                        Toast.makeText(DeviceInventoryActivity.this,
+                            "Lỗi kết nối: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+                }
+            });
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "ID thiết bị không hợp lệ", Toast.LENGTH_SHORT).show();
         }
     }
 }

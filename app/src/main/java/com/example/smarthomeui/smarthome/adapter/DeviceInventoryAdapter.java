@@ -14,7 +14,7 @@ public class DeviceInventoryAdapter extends RecyclerView.Adapter<DeviceInventory
 
     public interface OnItemAction {
         void onControl(Device d, int pos);   // mở bottom sheet điều khiển (tuỳ chọn)
-        void onAssign(Device d, int pos);    // gán vào phòng (sẽ làm sau)
+        void onEdit(Device d, int pos);      // sửa thông tin thiết bị
         void onDelete(Device d, int pos);    // xóa khỏi kho
     }
 
@@ -64,12 +64,12 @@ public class DeviceInventoryAdapter extends RecyclerView.Adapter<DeviceInventory
         // Menu 3 chấm
         h.ivMenu.setOnClickListener(v -> {
             PopupMenu pm = new PopupMenu(v.getContext(), v);
-            pm.getMenu().add(0, 1, 0, "Gán vào phòng");
-            pm.getMenu().add(0, 2, 1, "Xoá khỏi kho");
+            pm.getMenu().add(0, 1, 0, "Sửa thiết bị");
+            pm.getMenu().add(0, 2, 1, "Xóa thiết bị");
             pm.setOnMenuItemClickListener(item -> {
                 if (listener == null) return true;
                 int id = item.getItemId();
-                if (id == 1) listener.onAssign(d, h.getBindingAdapterPosition());
+                if (id == 1) listener.onEdit(d, h.getBindingAdapterPosition());
                 else if (id == 2) listener.onDelete(d, h.getBindingAdapterPosition());
                 return true;
             });

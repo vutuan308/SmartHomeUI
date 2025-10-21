@@ -71,8 +71,24 @@ public interface Api {
     @GET("/api/room/{roomId}/devices")
     Call<DeviceListWrap> getDevicesByRoomId(@Path("roomId") int roomId);
 
+    // Thêm thiết bị vào phòng
+    @POST("/api/room/{roomId}/devices/{deviceId}")
+    Call<Void> addDeviceToRoom(@Path("roomId") int roomId, @Path("deviceId") int deviceId);
+
+    // Xóa thiết bị ra khỏi phòng
+    @DELETE("/api/room/{roomId}/devices/{deviceId}")
+    Call<Void> removeDeviceFromRoom(@Path("roomId") int roomId, @Path("deviceId") int deviceId);
+
     // Điều khiển thiết bị
     @POST("/api/device/{id}/control")
     Call<DeviceControlResponse> controlDevice(@Path("id") String deviceId,
                                               @Body DeviceControlRequest request);
+
+    // Cập nhật thiết bị
+    @PUT("/api/device/{id}")
+    Call<DeviceDto> updateDevice(@Path("id") int id, @Body UpdateDeviceReq body);
+
+    // Xóa thiết bị
+    @DELETE("/api/device/{id}")
+    Call<Void> deleteDevice(@Path("id") int id);
 }

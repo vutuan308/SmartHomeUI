@@ -14,13 +14,14 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
     // NHỚ có dấu / cuối
-    private static final String BASE_URL = " https://65bd7b196551.ngrok-free.app/";
+    private static final String BASE_URL = " https://f3daddeece93.ngrok-free.app/";
 
     private static Retrofit authedRetrofit;
     private static Retrofit noAuthRetrofit;
 
     private static Gson buildGson() {
         return new GsonBuilder()
+                .serializeNulls()
                 .registerTypeAdapter(com.example.smarthomeui.smarthome.network.HouseListWrap.class,
                         new com.example.smarthomeui.smarthome.network.HouseListWrap.Deserializer())
                 .registerTypeAdapter(com.example.smarthomeui.smarthome.network.RoomsByHouseWrap.class,

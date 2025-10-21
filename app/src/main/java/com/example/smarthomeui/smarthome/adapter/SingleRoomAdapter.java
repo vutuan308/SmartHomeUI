@@ -4,6 +4,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -17,7 +18,11 @@ import java.util.List;
 
 public class SingleRoomAdapter extends RecyclerView.Adapter<SingleRoomAdapter.VH> {
 
-    public interface OnDeviceClick { void onClick(Device d, int position); }
+    public interface OnDeviceClick {
+        void onClick(Device d, int position);
+        void onEdit(Device d, int position);
+        void onDelete(Device d, int position);
+    }
 
     private final List<Device> data;
     private final OnDeviceClick listener;
@@ -52,7 +57,7 @@ public class SingleRoomAdapter extends RecyclerView.Adapter<SingleRoomAdapter.VH
             icon = R.drawable.ic_device_light;
         } else if (t.contains("fan") || t.contains("quạt") || t.contains("quat")) {
             icon = R.drawable.ic_device_fan;
-        } 
+        }
         h.ivDeviceIcon.setImageResource(icon);
 
         // Màu icon nếu là đèn
@@ -78,6 +83,19 @@ public class SingleRoomAdapter extends RecyclerView.Adapter<SingleRoomAdapter.VH
         h.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onClick(d, h.getBindingAdapterPosition());
         });
+
+        // Menu 3 chấm
+        h.ivMenu.setOnClickListener(v -> {
+            PopupMenu pm = new PopupMenu(v.getContext(), v);
+            pm.getMenu().add(0, 1, 0, "Xóa thiết bị");
+            pm.setOnMenuItemClickListener(item -> {
+                if (listener == null) return true;
+                int id = item.getItemId();
+                if (id == 1) listener.onDelete(d, h.getBindingAdapterPosition());
+                return true;
+            });
+            pm.show();
+        });
     }
 
     @Override public int getItemCount() { return data == null ? 0 : data.size(); }
@@ -97,11 +115,9 @@ public class SingleRoomAdapter extends RecyclerView.Adapter<SingleRoomAdapter.VH
     }
 
     static class VH extends RecyclerView.ViewHolder {
-        ImageView ivDeviceIcon;
-        TextView tvDeviceName;
-        TextView tvDeviceType;
+        ImageView ivDeviceIcon, ivMenu;
+        TextView tvDeviceName, tvDeviceType, tvBadge;
         MaterialSwitch swDeviceOnOff;
-        TextView tvBadge;
 
         VH(@NonNull View itemView) {
             super(itemView);
@@ -110,6 +126,7 @@ public class SingleRoomAdapter extends RecyclerView.Adapter<SingleRoomAdapter.VH
             tvDeviceType   = itemView.findViewById(R.id.tvDeviceType);
             swDeviceOnOff  = itemView.findViewById(R.id.swDeviceOnOff);
             tvBadge        = itemView.findViewById(R.id.tvBadge);
+            ivMenu         = itemView.findViewById(R.id.ivMenu);
         }
     }
 }

@@ -92,8 +92,9 @@ public class WiFiProvisionActivity extends AppCompatActivity {
         // Kiểm tra xem có ESP device từ Bluetooth không
         ESPDevice device = ProvisionSession.get().getEspDevice();
         if (device != null) {
-            Toast.makeText(this, "Thiết bị ESP đã kết nối qua Bluetooth. Đang quét WiFi...", Toast.LENGTH_SHORT).show();
-            scan();
+            Toast.makeText(this, "Thiết bị ESP đã kết nối qua Bluetooth. Đang khởi tạo...", Toast.LENGTH_SHORT).show();
+            // Delay một chút để đảm bảo connection ổn định
+            new android.os.Handler().postDelayed(() -> scan(), 500);
         } else {
             Toast.makeText(this, "Không có thiết bị ESP trong session. Vui lòng quay lại và kết nối Bluetooth trước.", Toast.LENGTH_LONG).show();
             finish();
@@ -112,6 +113,11 @@ public class WiFiProvisionActivity extends AppCompatActivity {
         aps.clear();
 
         try {
+            // Kiểm tra xem device có sẵn sàng không
+            if (dev.getTransportType() == ESPConstants.TransportType.TRANSPORT_BLE) {
+                Log.d("WiFiProvision", "Device transport type: BLE");
+            }
+
             dev.scanNetworks(new WiFiScanListener() {
                 @Override
                 public void onWifiListReceived(ArrayList<WiFiAccessPoint> wifiList) {
@@ -124,6 +130,7 @@ public class WiFiProvisionActivity extends AppCompatActivity {
                         adapter.clear();
                         adapter.add("Quét WiFi thất bại: " + e.getMessage());
                         Toast.makeText(WiFiProvisionActivity.this, "Quét WiFi thất bại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Log.e("WiFiProvision", "WiFi scan failed", e);
                     });
                 }
             });
@@ -131,6 +138,12 @@ public class WiFiProvisionActivity extends AppCompatActivity {
             adapter.clear();
             adapter.add("Thiếu quyền để quét WiFi");
             Toast.makeText(this, "Thiếu quyền để quét WiFi: " + se.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e("WiFiProvision", "Security exception", se);
+        } catch (Exception e) {
+            adapter.clear();
+            adapter.add("Lỗi khi quét WiFi: " + e.getMessage());
+            Toast.makeText(this, "Lỗi khi quét WiFi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e("WiFiProvision", "Exception during scan", e);
         }
     }
 

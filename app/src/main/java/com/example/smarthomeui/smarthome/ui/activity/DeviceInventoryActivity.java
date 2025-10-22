@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.util.Log;
+import android.widget.Spinner;
 import android.widget.Toast;
 import android.bluetooth.BluetoothDevice;
 
@@ -243,6 +244,15 @@ public class DeviceInventoryActivity extends AppCompatActivity {
     private void showDeviceNameDialog() {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_enter_device_name, null, false);
         EditText edtDeviceName = view.findViewById(R.id.edtDeviceName);
+        Spinner spinnerType = view.findViewById(R.id.spinnerDeviceType);
+
+        String[] displayNames = {"Đèn RGB", "Đèn thường", "Quạt"};
+        String[] deviceTypeValues = {"RgbLight", "Light", "Fan"};
+
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, displayNames);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerType.setAdapter(spinnerAdapter);
 
         AlertDialog dialog = new AlertDialog.Builder(this, R.style.ThemeOverlay_Material3_Dialog)
                 .setTitle("Thêm thiết bị ESP")
@@ -259,6 +269,15 @@ public class DeviceInventoryActivity extends AppCompatActivity {
                     edtDeviceName.setError("Nhập tên thiết bị");
                     return;
                 }
+                // Lấy vị trí được chọn từ spinner
+                int selectedPosition = spinnerType.getSelectedItemPosition();
+                String deviceType = deviceTypeValues[selectedPosition];
+
+                // Lưu tên thiết bị và loại thiết bị vào session
+                ProvisionSession.get().setDeviceName(deviceName);
+                ProvisionSession.get().setDeviceType(deviceType);
+
+                dialog.dismiss();
 
                 // Lưu tên thiết bị vào session
                 ProvisionSession.get().setDeviceName(deviceName);

@@ -279,6 +279,51 @@ public class WiFiProvisionActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void showDeviceInfoDialog(String ssid, String pass, AlertDialog wifiDialog) {
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_enter_device_name, null, false);
+        EditText edtDeviceName = view.findViewById(R.id.edtDeviceName);
+        android.widget.Spinner spinnerDeviceType = view.findViewById(R.id.spinnerDeviceType);
+
+        // Map giữa tên hiển thị (Tiếng Việt) và giá trị (Tiếng Anh)
+        String[] displayNames = {"Đèn RGB", "Đèn thường", "Quạt"};
+        String[] deviceTypeValues = {"RgbLight", "Light", "Fan"};
+
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, displayNames);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerDeviceType.setAdapter(spinnerAdapter);
+
+        AlertDialog deviceDialog = new AlertDialog.Builder(this, R.style.ThemeOverlay_Material3_Dialog)
+                .setTitle("Thông tin thiết bị")
+                .setView(view)
+                .setPositiveButton("Lưu", null)
+                .setNegativeButton(R.string.cancel, (d, w) -> d.dismiss())
+                .create();
+
+        deviceDialog.setOnShowListener(d -> {
+            deviceDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String deviceName = edtDeviceName.getText().toString().trim();
+
+                if (deviceName.isEmpty()) {
+                    edtDeviceName.setError("Vui lòng nhập tên thiết bị");
+                    return;
+                }
+
+                // Lấy giá trị tiếng Anh từ vị trí được chọn
+                int selectedPosition = spinnerDeviceType.getSelectedItemPosition();
+                String deviceType = deviceTypeValues[selectedPosition];
+
+                // Lưu vào session để dùng trong sendConfigAndFinish
+                ProvisionSession.get().setDeviceName(deviceName);
+                ProvisionSession.get().setDeviceType(deviceType);
+
+                deviceDialog.dismiss();
+                doProvision(ssid, pass, deviceName, wifiDialog);
+            });
+        });
+        deviceDialog.show();
+    }
+
     private void doProvision(String ssid, String pass, String deviceName, @Nullable AlertDialog dismissOnSuccess) {
         ESPDevice dev = ProvisionSession.get().getEspDevice();
         if (dev == null) {
@@ -343,6 +388,10 @@ public class WiFiProvisionActivity extends AppCompatActivity {
 
     private void sendConfigAndFinish(String deviceName, @Nullable AlertDialog dismissOnSuccess) {
         try {
+            String deviceType = ProvisionSession.get().getDeviceType();
+            if (deviceType == null || deviceType.isEmpty()) {
+                deviceType = "RgbLight"; // Mặc định
+            }
             // Tạo JSON chỉ với 3 trường: device_name, room_id, user_id
             org.json.JSONObject jsonObject = new org.json.JSONObject();
             jsonObject.put("device_name", deviceName);

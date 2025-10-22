@@ -10,6 +10,8 @@ constraintlayout = "2.2.1"
 retrofit = "2.9.0"
 gson = "2.9.0"
 okhttp = "4.11.0"
+googleGmsGoogleServices = "4.4.4"
+firebaseInappmessagingDisplay = "22.0.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -22,7 +24,9 @@ constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayo
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "gson" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+firebase-inappmessaging-display = { group = "com.google.firebase", name = "firebase-inappmessaging-display", version.ref = "firebaseInappmessagingDisplay" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library     = { id = "com.android.library",     version.ref = "agp" }
+google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsGoogleServices" }

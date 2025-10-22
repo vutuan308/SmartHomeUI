@@ -91,4 +91,9 @@ public interface Api {
     // Xóa thiết bị
     @DELETE("/api/device/{id}")
     Call<Void> deleteDevice(@Path("id") int id);
+
+    // ===== FCM TOKEN =====
+    // Cập nhật FCM token cho user
+    @POST("/api/users/fcm-token")
+    Call<Void> updateFCMToken(@Body FcmTokenRequest request);
 }

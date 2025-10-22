@@ -47,9 +47,11 @@ public class WiFiProvisionActivity extends AppCompatActivity {
     private Button btnScan;
     private Button btnManual;
     private boolean isInitialized = false;
+    private ESPProvisionManager provisionManager;
 
     public static void start(AppCompatActivity activity) {
         activity.startActivity(new Intent(activity, WiFiProvisionActivity.class));
+
     }
 
     public static void start(AppCompatActivity activity, String roomId, String userId) {
@@ -62,6 +64,7 @@ public class WiFiProvisionActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        provisionManager = ESPProvisionManager.getInstance(this);
         setContentView(R.layout.activity_wifi_provision);
 
         handler = new Handler(Looper.getMainLooper());
@@ -371,12 +374,13 @@ public class WiFiProvisionActivity extends AppCompatActivity {
 
                 @Override
                 public void deviceProvisioningSuccess() {
+                    sendConfigAndFinish(deviceName, dismissOnSuccess);
                     runOnUiThread(() -> {
                         Toast.makeText(WiFiProvisionActivity.this, "Provisioning thành công! Đang gửi cấu hình...", Toast.LENGTH_SHORT).show();
                         Log.d(TAG, "Provisioning successful. Waiting " + CONFIG_SEND_DELAY + "ms before sending config...");
 
                         // Delay trước khi gửi config để đảm bảo device sẵn sàng
-                        handler.postDelayed(() -> sendConfigAndFinish(deviceName, dismissOnSuccess), CONFIG_SEND_DELAY);
+//                        handler.postDelayed(() -> sendConfigAndFinish(deviceName, dismissOnSuccess), CONFIG_SEND_DELAY);
                     });
                 }
             });
@@ -394,17 +398,18 @@ public class WiFiProvisionActivity extends AppCompatActivity {
             }
             // Tạo JSON chỉ với 3 trường: device_name, room_id, user_id
             org.json.JSONObject jsonObject = new org.json.JSONObject();
-            jsonObject.put("device_name", deviceName);
-            jsonObject.put("room_id", roomId != null ? roomId : "");
-            jsonObject.put("user_id", userId != null ? userId : "");
+            jsonObject.put("name", deviceName);
+            jsonObject.put("roomId", roomId != null ? roomId : "");
+            jsonObject.put("userId", userId != null ? userId : "");
+            jsonObject.put("type", deviceType);
 
             String json = jsonObject.toString();
             Log.d(TAG, "Sending config to device: " + json);
 
             // Gửi JSON đến ESP device qua custom endpoint
-            ESPDevice device = ProvisionSession.get().getEspDevice();
+            ESPDevice device = provisionManager.getEspDevice();
             if (device != null) {
-                device.sendDataToCustomEndPoint("config", json.getBytes(), new ResponseListener() {
+                device.sendDataToCustomEndPoint("test", json.getBytes(), new ResponseListener() {
                     @Override
                     public void onSuccess(byte[] returnData) {
                         String response = new String(returnData);

@@ -9,6 +9,7 @@ public class ProvisionSession {
     @Nullable private ESPDevice espDevice;
     private String pop = "abcd1234";
     private String deviceName;
+    private String deviceType;
 
     private ProvisionSession() {}
 
@@ -25,6 +26,14 @@ public class ProvisionSession {
 
     public String getDeviceName() { return deviceName; }
     public void setDeviceName(String deviceName) { this.deviceName = deviceName; }
+
+    public void setDeviceType(String deviceType) {
+        this.deviceType = deviceType;
+    }
+
+    public String getDeviceType() {
+        return deviceType;
+    }
 
     public void clear() {
         espDevice = null;

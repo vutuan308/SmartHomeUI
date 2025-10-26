@@ -65,16 +65,9 @@ public class BLEScanActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ble_scan);
 
-        // Lấy roomId và userId từ Intent
-        roomId = getIntent().getStringExtra("room_id");
-        userId = getIntent().getStringExtra("user_id");
-
-        // Nếu không có userId, lấy từ UserManager
-        if (userId == null || userId.isEmpty()) {
-            com.example.smarthomeui.smarthome.utils.UserManager userManager =
-                new com.example.smarthomeui.smarthome.utils.UserManager(this);
-            userId = userManager.getUserId();
-        }
+        WiFiProvisionActivity.start(this,
+                getIntent().getStringExtra("room_id"),
+                getIntent().getStringExtra("user_id"));
 
         // Khởi tạo Bluetooth adapter
         BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);

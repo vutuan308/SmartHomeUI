@@ -16,6 +16,7 @@ public class DeviceModels {
         public String  room      = "UNKNOWN";
         public Integer value     = -1;           // -1 khi không rõ
         public String  raw;
+        public int deviceOrdinal;
 
         public boolean isDeviceKnown() { return deviceId != null && !"UNKNOWN".equals(deviceId); }
         public boolean isActionKnown() { return action != Action.UNKNOWN; }

@@ -29,10 +29,7 @@ public class DeviceConfirmSheet {
     private int index = 0;
     private final ParseResult planned;
 
-    public DeviceConfirmSheet(Context ctx,
-                              List<DeviceRegistry.CandidateResult> candidates,
-                              ParseResult planned,
-                              Callback cb) {
+    public DeviceConfirmSheet(Context ctx, List<DeviceRegistry.CandidateResult> candidates, ParseResult planned, Callback cb) {
         dialog = new BottomSheetDialog(ctx);
         View v = LayoutInflater.from(ctx).inflate(R.layout.sheet_device_confirm, null, false);
         dialog.setContentView(v);
@@ -61,8 +58,8 @@ public class DeviceConfirmSheet {
 
     private void bindCandidate() {
         Device d = candidates.get(index).device;
-        tvDeviceName.setText(d.getName());
-        tvRoomType.setText(d.getRoom() + " • " + d.getType());
+        tvDeviceName.setText(d.getName() + " • " + d.getType());
+        tvRoomType.setText("Phòng: " + d.getRoom());
 
         String actionStr;
         switch (planned.action) {
@@ -74,7 +71,6 @@ public class DeviceConfirmSheet {
             default: actionStr = "Hành động: (không rõ)";
         }
         tvPlannedAction.setText(actionStr);
-
         // Icon gợi ý (tương thích Device.java có isLight()/isFan())
         if (d.isFan())      imgDevice.setImageResource(R.drawable.toys_fan_24px);
         else                imgDevice.setImageResource(R.drawable.lightbulb_24px);

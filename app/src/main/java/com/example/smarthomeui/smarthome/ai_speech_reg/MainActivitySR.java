@@ -261,7 +261,7 @@ public class MainActivitySR extends AppCompatActivity {
     }
 
     private DeviceControlRequest buildVoiceRequestForDevice(Device d, ParseResult planned) {
-        String typeL = (d.getType() == null ? "" : d.getType().toLowerCase(Locale.ROOT));
+        String typeL = (planned.deviceType == null ? "" : planned.deviceType.toLowerCase(Locale.ROOT));
         DeviceModels.Action a = planned.action;
         Integer v = planned.value;
         if (v != null && v < 0) v = null; // normalize -1 -> null
@@ -277,10 +277,22 @@ public class MainActivitySR extends AppCompatActivity {
             switch (a) {
                 case TURN_ON:  out = 255; break;
                 case TURN_OFF: out = 0;   break;
-                case INCREASE: out = clamp(cur + (v != null ? v : STEP_LIGHT), 0, 255); break;
-                case DECREASE: out = clamp(cur - (v != null ? v : STEP_LIGHT), 0, 255); break;
+
+                case INCREASE:
+                case DECREASE:
+                    if (v != null) {
+                        // Có số => đặt tuyệt đối bằng số nói
+                        out = clamp(percentToRaw(v), 0, 255);
+                    } else {
+                        // Không số => bước mặc định
+                        out = clamp(cur + (a == DeviceModels.Action.INCREASE ? STEP_LIGHT : -STEP_LIGHT), 0, 255);
+                    }
+                    break;
+
                 case SET:
-                default:       out = (v != null) ? clamp(v, 0, 255) : cur; break;
+                default:
+                    out = (v != null) ? clamp(percentToRaw(v), 0, 255) : cur;
+                    break;
             }
 
             return new DeviceControlRequest("setLedDim", new JsonPrimitive(out));
@@ -288,20 +300,15 @@ public class MainActivitySR extends AppCompatActivity {
 
         // ===== RGB (param = {r,g,b} raw 0..255) =====
         if (typeL.contains("rgb")) {
-            int cur = currentOrBaseline(d, typeL);
-            int raw;
-            switch (a) {
-                case TURN_ON:  raw = 255; break;
-                case TURN_OFF: raw = 0;   break;
-                case INCREASE: raw = clamp(cur + (v != null ? v : STEP_LIGHT), 0, 255); break;
-                case DECREASE: raw = clamp(cur - (v != null ? v : STEP_LIGHT), 0, 255); break;
-                case SET:
-                default:       raw = (v != null) ? clamp(v, 0, 255) : cur; break;
+            // Nếu người nói không có "đặt/đổi màu" => bỏ qua
+            if (a != DeviceModels.Action.SET || planned.colorRgb == null) {
+                return new DeviceControlRequest("unknown");
             }
+
             JsonObject rgb = new JsonObject();
-            rgb.addProperty("r", raw);
-            rgb.addProperty("g", raw);
-            rgb.addProperty("b", raw);
+            rgb.addProperty("r", planned.colorRgb[0]);
+            rgb.addProperty("g", planned.colorRgb[1]);
+            rgb.addProperty("b", planned.colorRgb[2]);
             return new DeviceControlRequest("setRgbColor", rgb);
         }
 
@@ -309,19 +316,31 @@ public class MainActivitySR extends AppCompatActivity {
         if (typeL.contains("fan") || typeL.contains("quat")) {
             int cur = currentOrBaseline(d, typeL);
             int out;
+
             switch (a) {
                 case TURN_ON:  out = levelToRaw(3); break;
-                case TURN_OFF: out = 0;             break;
-                case INCREASE: out = clamp(cur + (v != null ? v : STEP_FAN), 0, 255); break;
-                case DECREASE: out = clamp(cur - (v != null ? v : STEP_FAN), 0, 255); break;
+                case TURN_OFF: out = 0;break;
+
+                case INCREASE:
+                case DECREASE:
+                    if (v != null) {
+                        // Có số (vd: "mức 2") => đặt tuyệt đối bằng số nói
+                        out = clamp(levelToRaw(v), 0, 255);
+                    } else {
+                        // Không số => bước mặc định
+                        out = clamp(cur + (a == DeviceModels.Action.INCREASE ? STEP_FAN : -STEP_FAN), 0, 255);
+                    }
+                    break;
+
                 case SET:
-                default:       out = (v != null) ? clamp(v, 0, 255) : cur; break;
+                default:
+                    out = (v != null) ? clamp(levelToRaw(v), 0, 255) : cur;
+                    break;
             }
+
             return new DeviceControlRequest("setFanSpeed", new JsonPrimitive(out));
         }
-
-        // Fallback
-        return new DeviceControlRequest("unknown");
+        return new DeviceControlRequest("unknownCommand", null);
     }
 
 

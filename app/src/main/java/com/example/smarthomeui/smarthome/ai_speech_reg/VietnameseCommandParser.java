@@ -34,6 +34,41 @@ public class VietnameseCommandParser {
             "\\b(?:den rgb|den led|den|quat|quạt|fan|light|rgb)\\s*(?:so|số)\\s*(\\d{1,3})\\b");
     private static final Pattern UPDOWN_ABS =
             Pattern.compile("\\b(?:len|xuong|den|toi|muc)\\s*(\\d{1,3})(?=\\D|$)");
+
+    private static final LinkedHashMap<String, int[]> BASIC_COLORS = new LinkedHashMap<>();
+    static {
+        BASIC_COLORS.put("mau do", new int[]{255,0,0});
+        BASIC_COLORS.put("do", new int[]{255,0,0});
+
+        BASIC_COLORS.put("mau xanh duong", new int[]{0,0,255});
+        BASIC_COLORS.put("xanh duong", new int[]{0,0,255});
+
+        BASIC_COLORS.put("mau xanh la", new int[]{0,255,0});
+        BASIC_COLORS.put("xanh la", new int[]{0,255,0});
+
+        BASIC_COLORS.put("mau vang", new int[]{255,255,0});
+        BASIC_COLORS.put("vang", new int[]{255,255,0});
+
+        BASIC_COLORS.put("mau cam", new int[]{255,165,0});
+        BASIC_COLORS.put("cam", new int[]{255,165,0});
+
+        BASIC_COLORS.put("mau hong", new int[]{255,105,180});
+        BASIC_COLORS.put("hong", new int[]{255,105,180});
+
+        BASIC_COLORS.put("mau tim", new int[]{128,0,255});
+        BASIC_COLORS.put("tim", new int[]{128,0,255});
+
+        BASIC_COLORS.put("mau trang", new int[]{255,255,255});
+        BASIC_COLORS.put("trang", new int[]{255,255,255});
+
+        BASIC_COLORS.put("mau den", new int[]{0,0,0});
+        BASIC_COLORS.put("den", new int[]{0,0,0});
+
+        BASIC_COLORS.put("mau xanh ngoc", new int[]{0,255,255});
+        BASIC_COLORS.put("xanh ngoc", new int[]{0,255,255});
+    }
+    private final Map<String, Integer> lastColorIndex = new HashMap<>();
+
     public ParseResult parse(String raw) {
         ParseResult out = new ParseResult();
         out.raw = raw;
@@ -58,11 +93,39 @@ public class VietnameseCommandParser {
         else if (f.matches(".*\\b(tat|dong|tắt|đóng|turn off)\\b.*")) out.action = Action.TURN_OFF;
         else if (f.matches(".*\\b(tang|tăng|len|lên|up|increase)\\b.*")) out.action = Action.INCREASE;
         else if (f.matches(".*\\b(giam|giảm|xuong|xuống|down|decrease)\\b.*")) out.action = Action.DECREASE;
-        else if (f.matches(".*\\b(dat|đặt|set)\\b.*")) out.action = Action.SET;
+        else if (f.matches(".*\\b(dat|đặt|set|doi|đổi|switch|change)\\b.*")) out.action = Action.SET;
 
-        // Value (quy về 0..255 hoặc null)
-        Integer raw255 = extractValueToRaw255(f);
-        out.value = (raw255 != null) ? raw255 : -1;  // -1 để builder hiểu là không có số
+//        if ((out.action == Action.INCREASE || out.action == Action.DECREASE) && out.value >= 0) {
+//            out.action = Action.SET;
+//        }
+        if (f.matches(".*\\b(doi|dat)\\b.*\\bmau\\b.*")) {
+            out.action = Action.SET;
+
+            // Tìm xem người dùng nói màu cụ thể nào
+            for (Map.Entry<String, int[]> e : BASIC_COLORS.entrySet()) {
+                if (f.contains(e.getKey())) {
+                    out.colorRgb = e.getValue();
+                    break;
+                }
+            }
+
+            if (out.colorRgb == null && out.deviceId != "UNKNOWN") {
+                int nextIndex = getNextColorIndex(out.deviceId);
+                int i = 0;
+                for (int[] c : BASIC_COLORS.values()) {
+                    if (i == nextIndex) { out.colorRgb = c; break; }
+                    i++;
+                }
+            }
+
+            // fallback nếu vẫn null
+            if (out.colorRgb == null) out.colorRgb = new int[]{255,255,255};
+        }
+        else {
+            Integer raw255 = extractValue(f);
+            out.value = (raw255 != null) ? raw255 : -1;  // -1 để builder hiểu là không có số
+
+        }
 
         // Room (sửa regex nhóm)
         String room = extractRoom(f);
@@ -78,13 +141,15 @@ public class VietnameseCommandParser {
 
         //  Ứng viên tốt nhất
         List<DeviceRegistry.CandidateResult> cands =
-                registry.rankCandidates(f, out.isRoomKnown()? out.room : null, 1);
+                registry.rankCandidates(f, out.isRoomKnown() ? out.room : null, 1);
         if (!cands.isEmpty()) {
             Device d = cands.get(0).device;
-            out.deviceId = d.getId();
+            out.deviceId   = d.getId();
             out.deviceName = d.getName();
+            out.deviceType = d.getType();   // <== thêm dòng này
             if (!out.isRoomKnown()) out.room = d.getRoom();
         }
+
         Log.d("VNParse", "fold=" + f);
         Matcher test = PERCENT.matcher(normalizeVi(raw));
         Log.d("VNParse", "percentFound=" + test.find());
@@ -107,12 +172,15 @@ public class VietnameseCommandParser {
         try { return Integer.parseInt(m.group(group)); } catch (Exception e) { return null; }
     }
 
+    private int getNextColorIndex(String deviceId) {
+        int size = BASIC_COLORS.size();
+        int current = lastColorIndex.getOrDefault(deviceId, -1);
+        int next = (current + 1) % size;
+        lastColorIndex.put(deviceId, next);
+        return next;
+    }
 
-    private static int clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
-    private static int percentToRaw(int percent) { return clamp((int)Math.round(percent * 255.0 / 100.0), 0, 255); }
-    private static int levelToRaw(int level0_3) { return clamp((int)Math.round(level0_3 * (255.0 / 3.0)), 0, 255); }
-
-    private Integer extractValueToRaw255(String raw) {
+    private Integer extractValue(String raw) {
         String f = normalizeVi(raw);
         // giữ lại số khi có ký tự lạ dính sau: "20%," -> "20%"
         f = f.replaceAll("(\\d)[^\\d\\s%]+", "$1");
@@ -120,17 +188,17 @@ public class VietnameseCommandParser {
         // 1) % (ưu tiên)
         Matcher m = PERCENT.matcher(f);
         Integer pct = parseIntSafe(m, 1);
-        if (pct != null) return percentToRaw(clamp(pct, 0, 100));
+        if (pct != null) return pct;
 
         // 2) "muc/cap/level <num>" (0..3)
         m = LEVEL.matcher(f);
         Integer lvl = parseIntSafe(m, 1);
-        if (lvl != null) return levelToRaw(clamp(lvl, 0, 3));
+        if (lvl != null) return lvl;
 
         // 3) "len/xuong/den/toi <num>"  → hiểu là % tuyệt đối
         m = UPDOWN_ABS.matcher(f);
         Integer abs = parseIntSafe(m, 1);
-        if (abs != null) return percentToRaw(clamp(abs, 0, 100));
+        if (abs != null) return abs;
 
         // 4) Không bắt số rời rạc để tránh dính "đèn số 1"
         return null;

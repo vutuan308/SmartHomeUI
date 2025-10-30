@@ -11,9 +11,16 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 
 import com.example.smarthomeui.R;
+import com.example.smarthomeui.smarthome.model.FcmTokenRequest;
+import com.example.smarthomeui.smarthome.network.ApiFCMClient;
+import com.example.smarthomeui.smarthome.network.ApiServiceFCM;
 import com.example.smarthomeui.smarthome.ui.activity.MainActivity;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final String TAG = "FCM_Service";
@@ -25,7 +32,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Log.d(TAG, "New FCM token: " + token);
 
         // Gửi token lên backend để lưu
-        sendTokenToServer(token);
+        // sendTokenToServer(token);
     }
 
     @Override
@@ -102,23 +109,30 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void sendTokenToServer(String token) {
-        // TODO: Gửi FCM token lên backend để lưu vào database
-        // Implement API call ở đây
-        Log.d(TAG, "Sending token to server: " + token);
+        Log.d(TAG, "Đang gửi token đến SERVER : " + token);
 
-        // Ví dụ:
-        // ApiService api = ApiClient.getClient(this).create(ApiService.class);
-        // FcmTokenRequest request = new FcmTokenRequest(token);
-        // api.updateFCMToken(request).enqueue(new Callback<Void>() {
-        //     @Override
-        //     public void onResponse(Call<Void> call, Response<Void> response) {
-        //         Log.d(TAG, "Token sent successfully");
-        //     }
-        //     @Override
-        //     public void onFailure(Call<Void> call, Throwable t) {
-        //         Log.e(TAG, "Failed to send token", t);
-        //     }
-        // });
+        // 1. Lấy ApiService từ ApiFCMClient (client MỚI trỏ đến server Python)
+        ApiServiceFCM apiService = ApiFCMClient.getClient().create(ApiServiceFCM.class);
+
+        // 2. Tạo đối tượng request body
+        FcmTokenRequest requestBody = new FcmTokenRequest(token);
+
+        // 3. Thực hiện cuộc gọi API (đến server Python)
+        apiService.registerToken(requestBody).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "Gửi token lên SERVER  thành công!");
+                } else {
+                    Log.e(TAG, "Gửi token đến SERVER  thất bại, mã lỗi: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Log.e(TAG, "Gửi token đến SERVER thất bại, lỗi kết nối: " + t.getMessage());
+            }
+        });
     }
 }
 

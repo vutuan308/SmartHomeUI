@@ -294,8 +294,8 @@ public class MainActivitySR extends AppCompatActivity {
                     out = (v != null) ? clamp(percentToRaw(v), 0, 255) : cur;
                     break;
             }
-
-            return new DeviceControlRequest("setLedDim", new JsonPrimitive(out));
+            String jsonCommand = "{\"method\":\"setLedDim\",\"params\":" + out + "}";
+            return new DeviceControlRequest(jsonCommand);
         }
 
         // ===== RGB (param = {r,g,b} raw 0..255) =====
@@ -305,15 +305,12 @@ public class MainActivitySR extends AppCompatActivity {
                 return new DeviceControlRequest("unknown");
             }
 
-            JsonObject rgb = new JsonObject();
-            rgb.addProperty("r", planned.colorRgb[0]);
-            rgb.addProperty("g", planned.colorRgb[1]);
-            rgb.addProperty("b", planned.colorRgb[2]);
-            return new DeviceControlRequest("setRgbColor", rgb);
+            String jsonCommand = "{\"method\":\"setRgbColor\",\"params\":" + "{\"r\":" + planned.colorRgb[0] + ",\"g\":" + planned.colorRgb[1] + ",\"b\":" + planned.colorRgb[2] + "}" + "}";
+            return new DeviceControlRequest(jsonCommand);
         }
 
         // ===== FAN (param = raw 0..255; level 0..3 cũng quy ra 0..255 từ parser) =====
-        if (typeL.contains("fan") || typeL.contains("quat")) {
+        if (typeL.contains("fan")) {
             int cur = currentOrBaseline(d, typeL);
             int out;
 
@@ -337,10 +334,10 @@ public class MainActivitySR extends AppCompatActivity {
                     out = (v != null) ? clamp(levelToRaw(v), 0, 255) : cur;
                     break;
             }
-
-            return new DeviceControlRequest("setFanSpeed", new JsonPrimitive(out));
+            String jsonCommand = "{\"method\":\"setFanSpeed\",\"params\":" + out + "}";
+            return new DeviceControlRequest(jsonCommand);
         }
-        return new DeviceControlRequest("unknownCommand", null);
+        return new DeviceControlRequest("unknownCommand");
     }
 
 

@@ -1,10 +1,13 @@
 package com.example.smarthomeui.smarthome.ui.activity;
 
+import static android.content.ContentValues.TAG;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -14,11 +17,15 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.smarthomeui.R;
+import com.example.smarthomeui.smarthome.model.FcmTokenRequest;
 import com.example.smarthomeui.smarthome.network.Api;
 import com.example.smarthomeui.smarthome.network.ApiClient;
+import com.example.smarthomeui.smarthome.network.ApiFCMClient;
+import com.example.smarthomeui.smarthome.network.ApiServiceFCM;
 import com.example.smarthomeui.smarthome.network.LoginRequest;
 import com.example.smarthomeui.smarthome.network.LoginResponse;
 import com.example.smarthomeui.smarthome.utils.UserManager;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -45,6 +52,8 @@ public class LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Không cần setContentView vì activity này chỉ để điều hướng
+
         // Thiết lập giao diện full screen và status bar trong suốt
         if (Build.VERSION.SDK_INT >= 19) {
             getWindow().getDecorView().setSystemUiVisibility(
@@ -142,14 +151,55 @@ public class LoginActivity extends AppCompatActivity {
                         userId,
                         expiryTime
                 );
-
+                sendToken();
                 Toast.makeText(LoginActivity.this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
                 navigateToHome(userRole);
+
             }
 
             @Override
             public void onFailure(Call<LoginResponse> call, Throwable t) {
                 showError("Lỗi kết nối: " + (t != null ? t.getMessage() : "Không xác định"));
+            }
+        });
+    }
+    private void sendToken (){
+        FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.d("FCM_DEBUG", "Fetching FCM Token failed", task.getException());
+                        return;
+                    }
+                    String token = task.getResult();
+                    callapi(token);
+                    Log.d("FCM_DEBUG", "Manual Token: " + token);
+                });
+
+    }
+
+    private void callapi( String token){
+
+        Log.d(TAG, "Đang gửi token đến SERVER : " + token );
+
+        ApiServiceFCM apiService = ApiFCMClient.getClient().create(ApiServiceFCM.class);
+
+        // 2. Tạo đối tượng request body
+        FcmTokenRequest requestBody = new FcmTokenRequest(token);
+
+        // 3. Thực hiện cuộc gọi API (đến server Python)
+        apiService.registerToken(requestBody).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "Gửi token lên SERVER  thành công!");
+                } else {
+                    Log.e(TAG, "Gửi token đến SERVER  thất bại, mã lỗi: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                Log.e(TAG, "Gửi token đến SERVER thất bại, lỗi kết nối: " + t.getMessage());
             }
         });
     }

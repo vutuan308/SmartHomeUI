@@ -27,7 +27,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Không cần setContentView vì activity này chỉ để điều hướng
 
         // Lấy FCM token
         getFCMToken();
